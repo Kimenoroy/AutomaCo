@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\UserController;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
 
@@ -33,6 +34,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //AUTH
         Route::get('/auth/social/redirect', [SocialAuthController::class, 'getRedirectUrl']);
+
+        //USUARIOS
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']); 
+        Route::put('/users/{id}', [UserController::class, 'update']);
+        Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
         // Aquí irán las rutas de descarga de DTE cuando las implemente
 

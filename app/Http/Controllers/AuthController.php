@@ -46,40 +46,47 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        //Validar los datos de entrada
+        // Validar los datos de entrada
         $credential = $request->validate([
             'email' => 'required|email',
             'password' => 'required'
         ]);
 
-        //Intentar autenticar al usuario
+        // Intentar autenticar al usuario
         if (Auth::attempt($credential)) {
             $user = User::where('email', $request->email)->first();
 
-            //Verificar si la cuenta está activada
-            if (!$user->is_active) {
-                return response()->json([
-                    'message' => 'Su cuenta no está activada. Por favor, active su cuenta con un código de activación.',
-                    'error' => 'account_not_activated'
-                ], 403);
-            }
-
-            //Eliminar todos los tokens anteriores
+            // 1. Eliminamos tokens anteriores y creamos uno nuevo SIEMPRE
             $user->tokens()->delete();
-
-            //Crear un nuevo token
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            //Retornar la respuesta con el token y la información del usuario
+            // Preparamos los datos del usuario
+            $userData = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role, 
+                'is_active' => (bool) $user->is_active
+            ];
+
+            // Verificamos si la cuenta NO está activa
+            if (!$user->is_active) {
+                return response()->json([
+                    'message' => 'Credenciales correctas, pero requiere activación.',
+                    'require_activation' => true, 
+                    'access_token' => $token,
+                    'token_type' => 'Bearer',
+                    'user' => $userData
+                ], 200); // Retornamos 200 OK para que no caiga en el catch del frontend
+            }
+
+            // Si la cuenta ESTÁ activa, flujo normal
             return response()->json([
-                'mensage' => 'Inicio de sesión exitoso',
+                'message' => 'Inicio de sesión exitoso',
+                'require_activation' => false,
                 'access_token' => $token,
                 'token_type' => 'Bearer',
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email
-                ]
+                'user' => $userData
             ], 200);
         }
 
