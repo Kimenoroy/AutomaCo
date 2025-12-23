@@ -10,13 +10,17 @@ class Invoice extends Model
     use HasFactory;
     
     protected $fillable = [
+        'user_id',
         'generation_code',
         'pdf_path',
         'json_path',
-        'raw_data'
     ];
 
-    protected $casts = [
-        'raw_data' => 'array', // Convierte el JSON a array automáticamente
-    ];
+    /**
+     * Relación con usuario
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

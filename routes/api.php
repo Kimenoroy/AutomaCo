@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UserController;
@@ -41,7 +42,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{id}', [UserController::class, 'update']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-        // Aquí irán las rutas de descarga de DTE cuando las implemente
+        // FACTURAS (INVOICES)
+        Route::get('/invoices', [InvoiceController::class, 'index']);
+        Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
+        Route::get('/invoices/{id}/download/pdf', [InvoiceController::class, 'downloadPdf']);
+        Route::get('/invoices/{id}/download/json', [InvoiceController::class, 'downloadJson']);
 
     });
 });
+
+// Ruta pública para recibir facturas desde n8n (sin autenticación)
+Route::post('/invoices/webhook', [InvoiceController::class, 'store']);
