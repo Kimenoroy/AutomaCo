@@ -6,6 +6,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\SettingsController;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
 
@@ -38,7 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //USUARIOS
         Route::get('/users', [UserController::class, 'index']);
-        Route::post('/users', [UserController::class, 'store']); 
+        Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{id}', [UserController::class, 'update']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
@@ -48,6 +49,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/invoices/{id}/download/pdf', [InvoiceController::class, 'downloadPdf']);
         Route::get('/invoices/{id}/download/json', [InvoiceController::class, 'downloadJson']);
 
+        // AJUSTES (SETTINGS)
+        Route::get('/settings', [SettingsController::class, 'index']);
+        Route::put('/settings/profile', [SettingsController::class, 'updateProfile']);
+        Route::put('/settings/password', [SettingsController::class, 'updatePassword']);
+        Route::delete('/settings/provider/{id}', [SettingsController::class, 'unlinkProvider']);
+        Route::put('/settings/account', [SettingsController::class, 'destroy']);
     });
 });
 
