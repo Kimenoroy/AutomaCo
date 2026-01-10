@@ -10,9 +10,17 @@ use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Services\N8nService;
+
+use Illuminate\Support\Facades\Log;
 
 class SocialAuthController extends Controller
 {
+    private function getFrontendUrl()
+    {
+        return config('services.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+    }
+
     /**
      * Paso 1: El Frontend pide la URL (Recibe ID 1 o 2)
      */
@@ -21,7 +29,12 @@ class SocialAuthController extends Controller
         $request->validate(['provider_id' => 'required|exists:email_providers,id']);
 
         // Obtenemos el usuario que está pidiendo
-        $user = auth()->user();
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no autenticado'], 401);
+        }
+
 
         // Generamos un ID único temporal 
         $state = Str::random(40);
@@ -51,7 +64,10 @@ class SocialAuthController extends Controller
 
         // Generar URL
         // 'access_type' => 'offline' y 'prompt' => 'consent' son OBLIGATORIOS en Google para obtener Refresh Token
-        $url = Socialite::driver($driver)
+        $socialiteDriver = Socialite::driver($driver);
+
+        /** @var \Laravel\Socialite\Two\AbstractProvider $socialiteDriver */
+        $url = $socialiteDriver
             ->scopes($scopes)
             ->with([
                 'access_type' => 'offline',
@@ -67,48 +83,68 @@ class SocialAuthController extends Controller
 
     /**
      * Paso 2: Callback (Cuando vuelven de Google/Outlook)
-     * Este endpoint lo llama Google, no tu Frontend directamente.
+     * Este endpoint lo llama Google
      */
-    public function handleCallback(Request $request, $driver)
+  // Inyectamos N8nService en el método
+    public function handleCallback(Request $request, $driver, N8nService $n8nService)
     {
         try {
-            // Recuperamos el 'state' que volvió de Google
+            // ... (Tu código existente para recuperar state y userId) ...
             $state = $request->input('state');
             $userId = cache()->pull('social_auth_state_' . $state);
-
+            
             if (!$userId) {
-                return redirect("http://localhost:5173/dashboard?status=error&message=La sesión expiró, intenta de nuevo.");
+                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=La sesión expiró o es inválida");
             }
 
-            // Obtener usuario de Google/Outlook
-            $socialUser = Socialite::driver($driver)->stateless()->user();
-
-            // Buscar el ID del provider en tu DB basado en el driver
+            /** @var \Laravel\Socialite\Two\AbstractProvider $socialiteDriver */
+            $socialiteDriver = Socialite::driver($driver);
+            $socialUser = $socialiteDriver->stateless()->user();
+            
+            // ... (Tu código para buscar provider y guardar en DB) ...
             $providerName = $driver === 'azure' ? 'outlook' : 'google';
             $provider = EmailProvider::where('name', $providerName)->first();
 
-            // GUARDAR TOKENS PARA N8N
-            // 4. Guardamos la cuenta vinculada al usuario que encontramos en caché
+            if (!$provider) {
+                Log::error("Proveedor de email no encontrado: {$providerName}");
+                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Proveedor no configurado");
+            }
+
             ConnectedAccount::updateOrCreate(
+                // ... (Tus datos existentes) ...
                 [
-                    'user_id' => $userId, // <--- Usamos el ID recuperado
+                    'user_id' => $userId, 
                     'provider_user_id' => $socialUser->getId(),
                 ],
                 [
                     'email_provider_id' => $provider->id,
-                    'name' => $socialUser->getName(),    // <--- Guardamos Nombre
+                    'name' => $socialUser->getName(),
                     'email' => $socialUser->getEmail(),
-                    'avatar' => $socialUser->getAvatar(), // <--- Guardamos Foto
+                    'avatar' => $socialUser->getAvatar(),
                     'token' => $socialUser->token,
-                    'refresh_token' => $socialUser->refreshToken,
+                    'refresh_token' => $socialUser->refreshToken, // <--- IMPORTANTE: Asegúrate de tener esto
                     'expires_at' => property_exists($socialUser, 'expiresIn') ? now()->addSeconds($socialUser->expiresIn) : null,
                 ]
             );
 
-            // Redirigimos al Frontend con éxito
-            return redirect("http://localhost:5173/dashboard?status=linked_success");
+            // --- NUEVO CÓDIGO PARA ENVIAR A N8N ---
+            
+            $n8nService->sendProviderIdentifier([ // <--- CORREGIDO: Método correcto del servicio
+                'user_id' => $userId,
+                'provider' => $providerName,
+                'email' => $socialUser->getEmail(),
+                'access_token' => $socialUser->token,
+                'refresh_token' => $socialUser->refreshToken,
+                'expires_in' => property_exists($socialUser, 'expiresIn') ? $socialUser->expiresIn : 3600,
+            ]);
+
+            // ---------------------------------------
+
+            return redirect($this->getFrontendUrl() . "/dashboard?status=linked_success");
+
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error en autenticación: ' . $e->getMessage()], 500);
+            Log::error("Error en SocialAuth handleCallback: " . $e->getMessage());
+            return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Error interno al vincular cuenta");
         }
     }
 }

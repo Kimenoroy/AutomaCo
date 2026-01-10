@@ -104,7 +104,9 @@ class InvoiceController extends Controller
             ], 404);
         }
 
-        return Storage::disk('public')->download($invoice->pdf_path, "{$invoice->generation_code}.pdf");
+        $filename = str_replace(['/', '\\'], '-', $invoice->generation_code) . '.pdf';
+        $path = Storage::disk('public')->path($invoice->pdf_path);
+        return response()->download($path, $filename);
     }
 
     /**
@@ -124,7 +126,9 @@ class InvoiceController extends Controller
             ], 404);
         }
 
-        return Storage::disk('public')->download($invoice->json_path, "{$invoice->generation_code}.json");
+        $filename = str_replace(['/', '\\'], '-', $invoice->generation_code) . '.json';
+        $path = Storage::disk('public')->path($invoice->json_path);
+        return response()->download($path, $filename);
     }
 
     /**
@@ -143,8 +147,8 @@ class InvoiceController extends Controller
                 'id' => $invoice->id,
                 'generation_code' => $invoice->generation_code,
                 'created_at' => $invoice->created_at,
-                'pdf_url' => Storage::disk('public')->url($invoice->pdf_path),
-                'json_url' => Storage::disk('public')->url($invoice->json_path),
+                'pdf_url' => asset('storage/' . $invoice->pdf_path),
+                'json_url' => asset('storage/' . $invoice->json_path),
             ]
         ], 200);
     }
