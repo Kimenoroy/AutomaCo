@@ -20,8 +20,7 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name(
 Route::get('/auth/{driver}/callback', [SocialAuthController::class, 'handleCallback']);
 
 /*Rutas Protegidas (Necesitan estar autenticado)*/
-
-//Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
 
     // Ruta para activar cuenta (no requiere cuenta activada)
     Route::post('/activate', [AuthController::class, 'activate'])->name("activate");
@@ -56,7 +55,7 @@ Route::get('/auth/{driver}/callback', [SocialAuthController::class, 'handleCallb
         Route::delete('/settings/provider/{id}', [SettingsController::class, 'unlinkProvider']);
         Route::put('/settings/account', [SettingsController::class, 'destroy']);
     });
-//});
+});
 
 // Ruta pública para recibir facturas desde n8n (sin autenticación)
 Route::post('/invoices/webhook', [InvoiceController::class, 'store']);
