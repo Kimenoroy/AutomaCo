@@ -51,13 +51,13 @@ class SettingsController extends Controller
     }
 
     // Desvincular una cuenta (Outlook/Google)
-    public function unlinkProvider(Request $request, $providerId)
+    public function unlinkProvider(Request $request, $id)
     {
         $user = $request->user();
 
-        // Buscamos la cuenta vinculada de ese usuario
+        // Buscamos la cuenta específica asegurándonos que pertenezca al usuario autenticado
         $account = ConnectedAccount::where('user_id', $user->id)
-            ->where('email_provider_id', $providerId)
+            ->where('id', $id) 
             ->firstOrFail();
 
         $account->delete();
