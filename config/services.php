@@ -46,7 +46,7 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
-    'azure' => [ // Para Outlook
+    'azure' => [
         'client_id' => env('AZURE_CLIENT_ID'),
         'client_secret' => env('AZURE_CLIENT_SECRET'),
         'redirect' => env('AZURE_REDIRECT_URI'),

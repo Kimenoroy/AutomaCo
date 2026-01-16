@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
+
 class InvoiceController extends Controller
 {
     /**
@@ -17,7 +18,7 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
         return Invoice::where('user_id', $user->id)
             ->select('id', 'generation_code', 'created_at')
             ->orderBy('created_at', 'desc')
@@ -45,7 +46,7 @@ class InvoiceController extends Controller
         // Obtener un nombre único (usando json o generar uno)
         $content = file_get_contents($json->getRealPath());
         $data = json_decode($content, true);
-        
+
         if (json_last_error() !== JSON_ERROR_NONE) {
             return response()->json([
                 'message' => 'El archivo JSON no es válido',
@@ -93,7 +94,7 @@ class InvoiceController extends Controller
     public function downloadPdf(Request $request, $id)
     {
         $user = $request->user();
-        
+
         $invoice = Invoice::where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();
@@ -115,7 +116,7 @@ class InvoiceController extends Controller
     public function downloadJson(Request $request, $id)
     {
         $user = $request->user();
-        
+
         $invoice = Invoice::where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();
@@ -137,7 +138,7 @@ class InvoiceController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        
+
         $invoice = Invoice::where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();

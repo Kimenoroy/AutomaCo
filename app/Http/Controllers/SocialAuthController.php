@@ -85,14 +85,14 @@ class SocialAuthController extends Controller
      * Paso 2: Callback (Cuando vuelven de Google/Outlook)
      * Este endpoint lo llama Google
      */
-  // Inyectamos N8nService en el método
+    // Inyectamos N8nService en el método
     public function handleCallback(Request $request, $driver, N8nService $n8nService)
     {
         try {
-            // ... (Tu código existente para recuperar state y userId) ...
+
             $state = $request->input('state');
             $userId = cache()->pull('social_auth_state_' . $state);
-            
+
             if (!$userId) {
                 return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=La sesión expiró o es inválida");
             }
@@ -100,7 +100,7 @@ class SocialAuthController extends Controller
             /** @var \Laravel\Socialite\Two\AbstractProvider $socialiteDriver */
             $socialiteDriver = Socialite::driver($driver);
             $socialUser = $socialiteDriver->stateless()->user();
-            
+
             // ... (Tu código para buscar provider y guardar en DB) ...
             $providerName = $driver === 'azure' ? 'outlook' : 'google';
             $provider = EmailProvider::where('name', $providerName)->first();
@@ -113,7 +113,7 @@ class SocialAuthController extends Controller
             ConnectedAccount::updateOrCreate(
                 // ... (Tus datos existentes) ...
                 [
-                    'user_id' => $userId, 
+                    'user_id' => $userId,
                     'provider_user_id' => $socialUser->getId(),
                 ],
                 [
@@ -128,7 +128,7 @@ class SocialAuthController extends Controller
             );
 
             // --- NUEVO CÓDIGO PARA ENVIAR A N8N ---
-            
+
             $n8nService->sendProviderIdentifier([ // <--- CORREGIDO: Método correcto del servicio
                 'user_id' => $userId,
                 'provider' => $providerName,
@@ -141,7 +141,6 @@ class SocialAuthController extends Controller
             // ---------------------------------------
 
             return redirect($this->getFrontendUrl() . "/dashboard?status=linked_success");
-
         } catch (\Exception $e) {
             Log::error("Error en SocialAuth handleCallback: " . $e->getMessage());
             return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Error interno al vincular cuenta");
