@@ -29,63 +29,69 @@ class InvoiceController extends Controller
      * n8n enviará: user_id, pdf_file, json_file
      */
     public function store(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'pdf_file' => 'required|file|mimes:pdf|max:10240', // Max 10MB
-            'json_file' => 'required|file|mimes:json,text|max:5120', // Max 5MB
-        ]);
+{
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+        'pdf_file' => 'required|file|mimes:pdf|max:10240', // Max 10MB
+        'json_file' => 'required|file|mimes:json,text|max:5120', // Max 5MB
+    ]);
 
-        // Verificar que el usuario existe
-        $user = User::findOrFail($request->user_id);
+    // Verificar que el usuario existe
+    $user = User::findOrFail($request->user_id);
 
-        $pdf = $request->file('pdf_file');
-        $json = $request->file('json_file');
+    $pdf = $request->file('pdf_file');
+    $json = $request->file('json_file');
 
-        // Obtener un nombre único (usando json o generar uno)
-        $content = file_get_contents($json->getRealPath());
-        $data = json_decode($content, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json([
-                'message' => 'El archivo JSON no es válido',
-                'error' => json_last_error_msg()
-            ], 400);
-        }
+    // --- LÓGICA PARA OBTENER EL NOMBRE ORIGINAL ---
+    $pdfOriginalName = $pdf->getClientOriginalName();
+    $jsonOriginalName = $json->getClientOriginalName();
+    // ----------------------------------------------
 
-        $code = $data['generationCode'] ?? $data['codigoGeneracion'] ?? Str::uuid()->toString();
+    // Obtener un nombre único (usando json o generar uno)
+    $content = file_get_contents($json->getRealPath());
+    $data = json_decode($content, true);
 
-        // Verificar si ya existe
-        if (Invoice::where('generation_code', $code)->exists()) {
-            return response()->json([
-                'message' => 'La factura con este código ya existe',
-                'generation_code' => $code
-            ], 409);
-        }
-
-        // Guardar facturas en una carpeta organizada por fecha
-        $folder = 'invoices/' . date('Y/m');
-
-        $pdfPath = $pdf->storeAs($folder, "{$code}.pdf", 'public');
-        $jsonPath = $json->storeAs($folder, "{$code}.json", 'public');
-
-        // Registrar en Base de Datos
-        $invoice = Invoice::create([
-            'user_id' => $user->id,
-            'generation_code' => $code,
-            'pdf_path' => $pdfPath,
-            'json_path' => $jsonPath,
-        ]);
-
+    if (json_last_error() !== JSON_ERROR_NONE) {
         return response()->json([
-            'message' => 'Factura guardada exitosamente',
-            'invoice' => [
-                'id' => $invoice->id,
-                'generation_code' => $invoice->generation_code,
-                'created_at' => $invoice->created_at,
-            ]
-        ], 201);
+            'message' => 'El archivo JSON no es válido',
+            'error' => json_last_error_msg()
+        ], 400);
     }
+
+    $code = $data['generationCode'] ?? $data['codigoGeneracion'] ?? Str::uuid()->toString();
+
+    // Verificar si ya existe
+    if (Invoice::where('generation_code', $code)->exists()) {
+        return response()->json([
+            'message' => 'La factura con este código ya existe',
+            'generation_code' => $code
+        ], 409);
+    }
+
+    // Guardar facturas en una carpeta organizada por fecha
+    $folder = 'invoices/' . date('Y/m');
+
+    // Se usan los nombres originales capturados arriba en lugar de {$code}
+    $pdfPath = $pdf->storeAs($folder, $pdfOriginalName, 'public');
+    $jsonPath = $json->storeAs($folder, $jsonOriginalName, 'public');
+
+    // Registrar en Base de Datos
+    $invoice = Invoice::create([
+        'user_id' => $user->id,
+        'generation_code' => $code,
+        'pdf_path' => $pdfPath,
+        'json_path' => $jsonPath,
+    ]);
+
+    return response()->json([
+        'message' => 'Factura guardada exitosamente',
+        'invoice' => [
+            'id' => $invoice->id,
+            'generation_code' => $invoice->generation_code,
+            'created_at' => $invoice->created_at,
+        ]
+    ], 201);
+}
 
     /**
      * Descargar PDF de la factura
