@@ -26,13 +26,14 @@ class AppServiceProvider extends ServiceProvider
         // 1. Configuración de Reset Password (que ya tenías)
         ResetPassword::createUrlUsing(function ($user, $token) {
             // Apuntamos al puerto 3000 (donde correrá React) o al dominio del frontend
-            return 'http:/localhost:5173//reset-password?token=' . $token . '&email=' . $user->email;
+            $frontenUrl = env('FRONTEND_URL');
+            return $frontenUrl . "/reset-password?token=" . $token . "&email=" . $user->email;
         });
 
         // 2. AGREGAR ESTO: Configuración para que funcione Outlook (Azure)
         Event::listen(
             SocialiteWasCalled::class,
-            AzureExtendSocialite::class.'@handle'
+            AzureExtendSocialite::class . '@handle'
         );
     }
 }
