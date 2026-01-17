@@ -11,9 +11,14 @@ class Invoice extends Model
     
     protected $fillable = [
         'user_id',
+        'client_name',
         'generation_code',
         'pdf_path',
         'json_path',
+        'pdf_original_name',
+        'pdf_created_at',
+        'json_original_name',
+        'json_created_at',
     ];
 
     /**

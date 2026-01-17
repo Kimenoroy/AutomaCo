@@ -33,12 +33,16 @@ class InvoiceController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
+            'client_name' => 'required|string',
             'pdf_file' => 'required|file|mimes:pdf|max:10240', // Max 10MB
             'json_file' => 'required|file|mimes:json,text|max:5120', // Max 5MB
+            'pdf_date' => 'nullable|date',
+            'json_date' => 'nullable|date',
         ]);
 
         // Verificar que el usuario existe
         $user = User::findOrFail($request->user_id);
+        $clientName = $request->client_name;
 
         $pdf = $request->file('pdf_file');
         $json = $request->file('json_file');
@@ -64,18 +68,31 @@ class InvoiceController extends Controller
             ], 409);
         }
 
-        // Guardar facturas en una carpeta organizada por fecha
-        $folder = 'invoices/' . date('Y/m');
+       // 1. Guardar archivos en carpeta del Cliente
+        $folderName = Str::slug($clientName);
+        $folder = 'invoices/' . $folderName . '/' . date('Y/m');
 
         $pdfPath = $pdf->storeAs($folder, "{$code}.pdf", 'public');
         $jsonPath = $json->storeAs($folder, "{$code}.json", 'public');
 
+        //Registro de los nombre y fecha originales de los archivos
+        $originalPdfName = $pdf->getClientOriginalName();
+        $originalJsonName = $json->getClientOriginalName();
+        $pdfCreatedAt = $request->input('pdf_date', now());
+        $jsonCreatedAt = $request->input('json_date', now());
+
         // Registrar en Base de Datos
         $invoice = Invoice::create([
             'user_id' => $user->id,
+            'client_name' => $clientName,
             'generation_code' => $code,
             'pdf_path' => $pdfPath,
             'json_path' => $jsonPath,
+
+            'pdf_original_name' => $originalPdfName,
+            'json_original_name' => $originalJsonName, 
+            'pdf_created_at' => $pdfCreatedAt,
+            'json_created_at' => $jsonCreatedAt,
         ]);
 
         return response()->json([
@@ -87,6 +104,9 @@ class InvoiceController extends Controller
             ]
         ], 201);
     }
+
+
+   
 
     /**
      * Descargar PDF de la factura
