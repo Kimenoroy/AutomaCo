@@ -20,9 +20,19 @@ class InvoiceController extends Controller
         $user = $request->user();
 
         return Invoice::where('user_id', $user->id)
-            ->select('id', 'generation_code', 'created_at')
+            ->select(
+                'id',
+                'generation_code',
+                'created_at',
+                'client_name',       
+                'pdf_created_at',    
+                'json_created_at',   
+                'pdf_original_name', 
+                'json_original_name' 
+            )
+            ->orderBy('client_name', 'asc')
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(50); 
     }
 
     /**
@@ -68,7 +78,7 @@ class InvoiceController extends Controller
             ], 409);
         }
 
-       // 1. Guardar archivos en carpeta del Cliente
+        // 1. Guardar archivos en carpeta del Cliente
         $folderName = Str::slug($clientName);
         $folder = 'invoices/' . $folderName . '/' . date('Y/m');
 
@@ -90,7 +100,7 @@ class InvoiceController extends Controller
             'json_path' => $jsonPath,
 
             'pdf_original_name' => $originalPdfName,
-            'json_original_name' => $originalJsonName, 
+            'json_original_name' => $originalJsonName,
             'pdf_created_at' => $pdfCreatedAt,
             'json_created_at' => $jsonCreatedAt,
         ]);
@@ -105,8 +115,6 @@ class InvoiceController extends Controller
         ], 201);
     }
 
-
-   
 
     /**
      * Descargar PDF de la factura
