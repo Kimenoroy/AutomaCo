@@ -7,6 +7,7 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\N8nController;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
 
@@ -59,3 +60,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Ruta pública para recibir facturas desde n8n (sin autenticación)
 Route::post('/invoices/webhook', [InvoiceController::class, 'store']);
+
+Route::middleware(['auth'])->group(function () {
+    // Ruta para que el usuario presione el botón de sincronizar
+    Route::post('/n8n/sync-invoices', [N8nController::class, 'syncInvoices'])->name('n8n.sync');
+});
+
+

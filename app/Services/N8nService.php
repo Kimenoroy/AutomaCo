@@ -15,6 +15,46 @@ class N8nService
     }
 
     /**
+     * Disparar el flujo principal de n8n para procesar facturas
+     *
+     * @param array $data Debe contener user_id, refresh_token y client_name
+     * @return bool
+     */
+    public function triggerInvoiceProcessing(array $data): bool
+    {
+        if (empty($this->webhookUrl)) {
+            Log::warning('N8N_WEBHOOK_URL no está configurado');
+            return false;
+        }
+
+        try {
+            $response = Http::post($this->webhookUrl, [
+                'user_id'       => $data['user_id'],
+                'refresh_token' => $data['refresh_token'],
+                'client_name'   => $data['client_name'],
+                'timestamp'     => now()->toIso8601String(),
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Flujo de facturas iniciado en n8n', ['user_id' => $data['user_id']]);
+                return true;
+            }
+
+            Log::error('Error al disparar flujo de facturas en n8n', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Excepción al conectar con n8n para facturas', [
+                'message' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Enviar credenciales del proveedor de email a n8n
      *
      * @param array $data
