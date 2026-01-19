@@ -8,6 +8,7 @@ use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\N8nController;
+use App\Http\Controllers\DashboardController;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
 
@@ -29,6 +30,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rutas que requieren cuenta activada
     Route::middleware('account.active')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
+
+        //Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index']);
 
         // Rutas de proveedores de email
         Route::get('/providers', [AuthController::class, 'getProviders'])->name('providers.list');
