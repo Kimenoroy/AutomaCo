@@ -1,0 +1,67 @@
+/* --- BASE --- */
+body, body *:not(html):not(style):not(br):not(tr):not(code) {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #f3f4f6; /* Fondo general gris suave */
+    color: #374151; /* Texto gris oscuro (no negro total para ser más elegante) */
+    height: 100%;
+    line-height: 1.6;
+    margin: 0;
+    width: 100% !important;
+    -webkit-text-size-adjust: none;
+}
+
+/* --- TARJETA CENTRAL (EL CONTENIDO) --- */
+.inner-body {
+    background-color: #ffffff;
+    border-radius: 8px; /* Bordes redondeados */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Sombra suave */
+    margin: 0 auto;
+    padding: 30px;
+    width: 570px;
+}
+
+.button {
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: #fff;
+    display: inline-block;
+    text-decoration: none;
+    padding: 12px 24px;
+    font-weight: bold;
+}
+
+.button-primary {
+    /* CAMBIA ESTE COLOR POR EL DE TU MARCA */
+    background-color: #4ade80;        /* Tu verde */
+    border-top: 10px solid #4ade80;    /* EL TRUCO: Borde del MISMO verde */
+    border-right: 18px solid #4ade80;  /* Borde derecho verde */
+    border-bottom: 10px solid #4ade80; /* Borde inferior verde */
+    border-left: 18px solid #4ade80;
+}
+
+/* --- TEXTOS --- */
+h1 {
+    color: #111827;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 0;
+    text-align: left;
+}
+
+p {
+    font-size: 16px;
+    line-height: 1.6em;
+    margin-top: 0;
+    color: #4b5563;
+}
+
+.action {
+    margin-top: 40px;    /* Espacio arriba (separación del texto) */
+    margin-bottom: 40px; /* Espacio abajo */
+    width: 100%;
+    text-align: center;
+}
