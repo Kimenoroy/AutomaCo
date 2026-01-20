@@ -59,8 +59,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings/password', [SettingsController::class, 'updatePassword']);
         Route::delete('/settings/provider/{id}', [SettingsController::class, 'unlinkProvider']);
         Route::put('/settings/account', [SettingsController::class, 'destroy']);
+
+        // N8N
+        Route::post('/n8n', [N8nController::class, 'syncInvoices']);
     });
 });
+
+
 
 // Ruta pública para recibir facturas desde n8n (sin autenticación)
 Route::post('/invoices/webhook', [InvoiceController::class, 'store']);
@@ -69,5 +74,3 @@ Route::middleware(['auth'])->group(function () {
     // Ruta para que el usuario presione el botón de sincronizar
     Route::post('/n8n/sync-invoices', [N8nController::class, 'syncInvoices'])->name('n8n.sync');
 });
-
-

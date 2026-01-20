@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\N8nService;
+use App\Models\ConnectedAccount; // Importación necesaria para las consultas
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,37 +11,47 @@ class N8nController extends Controller
 {
     protected $n8nService;
 
-    /**
-     * Inyectamos el servicio centralizado de n8n
-     */
     public function __construct(N8nService $n8nService)
     {
         $this->n8nService = $n8nService;
     }
 
     /**
-     * Método para disparar la sincronización de facturas
+     * Sincronización de facturas obteniendo datos de ConnectedAccount
      */
     public function syncInvoices(Request $request)
     {
-        $user = Auth::user();
+        // 1. Validamos la entrada del frontend
+        $request->validate([
+            'user_id' => 'required|integer',
+            'email_provider_id' => 'required|integer',
+        ]);
 
-        // Validamos que el usuario tenga los datos necesarios para n8n
-        if (!$user->refresh_token) {
-            return back()->withErrors(['error' => 'No se encontró una cuenta de correo vinculada.']);
+        // 2. Buscamos la cuenta conectada específica
+        // Esto permite que el flujo funcione aunque el usuario tenga varios proveedores
+        $account = ConnectedAccount::with('provider')
+            ->where('user_id', $request->user_id)
+            ->where('email_provider_id', $request->email_provider_id)
+            ->first();
+
+        if (!$account || !$account->refresh_token) {
+            return response()->json(['error' => 'Cuenta no encontrada o falta el refresh_token.'], 404);
         }
 
-        // Ejecutamos el disparo del flujo a través del servicio
-        $resultado = $this->n8nService->triggerInvoiceProcessing([
-            'user_id'       => $user->id,
-            'refresh_token' => $user->refresh_token,
-            'client_name'   => $user->name,
+
+        $resultado = $this->n8nService->sendProviderIdentifier([
+            'user_id'       => $account->user_id,
+            'provider'      => $account->provider->identifier, // Requiere relación con EmailProvider
+            'email'         => $account->email,
+            'access_token'  => $account->token,
+            'refresh_token' => $account->refresh_token,
+            'expires_in'    => $account->expires_at, // O el cálculo de segundos restantes
         ]);
 
         if ($resultado) {
-            return back()->with('status', 'Sincronización iniciada. Tus facturas aparecerán en breve.');
+            return response()->json(['status' => 'Sincronización iniciada con éxito.']);
         }
 
-        return back()->withErrors(['error' => 'Hubo un problema al conectar con el servicio de automatización.']);
+        return response()->json(['error' => 'Error al contactar con n8n.'], 500);
     }
 }
