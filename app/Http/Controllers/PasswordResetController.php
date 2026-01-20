@@ -35,7 +35,7 @@ class PasswordResetController extends Controller
             'token' => 'required',
             'email' => 'required|email',
             'password' => [
-                'required|confirmed|min:8',
+                'required','confirmed','min:8',
 
                 //Funcion para encontrar el correo del usuario
                 function ($attribute, $value, $fail) use ($request) {
