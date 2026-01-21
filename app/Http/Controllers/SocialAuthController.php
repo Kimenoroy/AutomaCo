@@ -93,6 +93,8 @@ class SocialAuthController extends Controller
     // Inyectamos N8nService en el método
     public function handleCallback(Request $request, $driver, N8nService $n8nService)
     {
+        $origin = 'dashboard';
+
         try {
 
             $state = $request->input('state');
@@ -113,11 +115,21 @@ class SocialAuthController extends Controller
                 $origin = 'dashboard';
             }
 
+            $targetPath = ($origin === 'settings') ? '/settings#email' : '/dashboard';
+
             /** @var \Laravel\Socialite\Two\AbstractProvider $socialiteDriver */
             $socialiteDriver = Socialite::driver($driver);
             $socialUser = $socialiteDriver->stateless()->user();
 
-            // ... (Tu código para buscar provider y guardar en DB) ...
+            //Verificamos si el email ya está vinculado a otra cuenta
+            $email = $socialUser->getEmail();
+            $existingAccount = ConnectedAccount::where('email', $email)->first();
+
+            // Si existe Y pertenece a OTRO usuario, detenemos todo y devolvemos error.
+            if ($existingAccount && $existingAccount->user_id !== $userId) {
+                return redirect($this->getFrontendUrl() . $targetPath . "?status=error&message=Este correo ya está vinculado a otra cuenta.");
+            }
+
             $providerName = $driver === 'azure' ? 'outlook' : 'google';
             $provider = EmailProvider::where('name', $providerName)->first();
 
@@ -156,13 +168,13 @@ class SocialAuthController extends Controller
 
             // ---------------------------------------
 
-            $targetPage = ($origin === 'settings') ? '/settings' : '/dashboard';
 
-            return redirect($this->getFrontendUrl() . $targetPage . "?status=linked_success");
+            return redirect($this->getFrontendUrl() . $targetPath . "?status=linked_success");
         } catch (\Exception $e) {
             Log::error("Error en SocialAuth handleCallback: " . $e->getMessage());
-            $errorPage = isset($origin) && $origin === 'settings' ? '/settings' : '/dashboard';
-            return redirect($this->getFrontendUrl() . $errorPage . "?status=error&message=Error interno");
+            $errorPath = (isset($origin) && $origin === 'settings') ? '/settings#email' : '/dashboard';
+            
+            return redirect($this->getFrontendUrl() . $errorPath . "?status=error&message=Error interno");
         }
     }
 
