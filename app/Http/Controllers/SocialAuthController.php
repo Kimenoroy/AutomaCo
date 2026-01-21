@@ -109,7 +109,7 @@ class SocialAuthController extends Controller
 
         try {
             $state = $request->input('state');
-
+            
             // Verificación de seguridad del estado
             if (!$state) {
                 return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Estado inválido");
@@ -136,7 +136,7 @@ class SocialAuthController extends Controller
             // Obtener datos del proveedor (Google/Outlook)
             $socialiteDriver = Socialite::driver($driver);
             $socialUser = $socialiteDriver->stateless()->user();
-
+            
             $email = $socialUser->getEmail();
             $socialId = $socialUser->getId();
 
@@ -144,15 +144,15 @@ class SocialAuthController extends Controller
             // CORRECCIÓN CRÍTICA: VALIDACIÓN GLOBAL
             // =========================================================================
             // Buscamos si este correo O este ID de Google ya existen en la BD (sin importar el usuario)
-            $existingAccount = ConnectedAccount::where(function ($query) use ($email, $socialId) {
+            $existingAccount = ConnectedAccount::where(function($query) use ($email, $socialId) {
                 $query->where('email', $email)
-                    ->orWhere('provider_user_id', $socialId);
+                      ->orWhere('provider_user_id', $socialId);
             })->first();
 
             // Si existe la cuenta Y pertenece a OTRO usuario (ID diferente al mío)
             if ($existingAccount && $existingAccount->user_id != $userId) {
                 Log::warning("Intento de vinculación duplicada: User {$userId} intentó vincular {$email} que pertenece a User {$existingAccount->user_id}");
-
+                
                 // DETENEMOS TODO AQUI y devolvemos error.
                 // IMPORTANTE: Esto evita que llegue al 'linked_success' de abajo.
                 return redirect($this->getFrontendUrl() . $targetPath . "?status=error&message=Esta cuenta de correo ya está vinculada a otro usuario.");
@@ -197,18 +197,12 @@ class SocialAuthController extends Controller
                 Log::error("Error enviando a N8N: " . $e->getMessage());
                 // No detenemos el flujo si falla N8N, pero lo logueamos
             }
-
-            $finalUrl = $this->getFrontendUrl() . $targetPath . "?status=linked_success";
-
-            // Esto detendrá el código y te mostrará la URL en la pantalla.
-            // Si ves que dice "localhost:5173/..." sin el http, ahí está el error.
-            dd($finalUrl);
-
-            return redirect($finalUrl);
             
+            return redirect($this->getFrontendUrl() . $targetPath . "?status=linked_success");
+
         } catch (\Exception $e) {
             Log::error("Error Fatal en SocialAuth: " . $e->getMessage());
-
+            
             // REDIRECCIÓN SEGURA EN CASO DE ERROR (CATCH)
             // Aseguramos que la URL esté bien formada incluso si falla el try
             return redirect($this->getFrontendUrl() . $targetPath . "?status=error&message=Error interno del servidor");
