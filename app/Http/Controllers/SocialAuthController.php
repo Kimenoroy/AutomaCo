@@ -93,88 +93,110 @@ class SocialAuthController extends Controller
     // Inyectamos N8nService en el método
     public function handleCallback(Request $request, $driver, N8nService $n8nService)
     {
+        // 1. Preparamos valores por defecto para evitar errores en el catch
         $origin = 'dashboard';
+        $targetPath = '/dashboard';
 
         try {
-
             $state = $request->input('state');
-            $cachedData = cache()->pull('social_auth_state_' . $state);
-
-            // Validación robusta por si la caché expiró
-            if (!$cachedData) {
-                // Por defecto mandamos al dashboard si falla algo grave
-                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Sesión expirada");
+            
+            // Verificación de seguridad del estado
+            if (!$state) {
+                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Estado inválido");
             }
 
+            $cachedData = cache()->pull('social_auth_state_' . $state);
 
+            if (!$cachedData) {
+                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=La sesión expiró, intenta de nuevo");
+            }
+
+            // Normalizar datos de caché
             if (is_array($cachedData)) {
                 $userId = $cachedData['user_id'];
                 $origin = $cachedData['origin'];
             } else {
                 $userId = $cachedData;
-                $origin = 'dashboard';
             }
 
+            // Configurar ruta de éxito/error basada en el origen
+            // Usamos #email para que el frontend abra la pestaña correcta
             $targetPath = ($origin === 'settings') ? '/settings#email' : '/dashboard';
 
-            /** @var \Laravel\Socialite\Two\AbstractProvider $socialiteDriver */
+            // Obtener datos del proveedor (Google/Outlook)
             $socialiteDriver = Socialite::driver($driver);
             $socialUser = $socialiteDriver->stateless()->user();
-
-            //Verificamos si el email ya está vinculado a otra cuenta
+            
             $email = $socialUser->getEmail();
-            $existingAccount = ConnectedAccount::where('email', $email)->first();
+            $socialId = $socialUser->getId();
 
-            // Si existe Y pertenece a OTRO usuario, detenemos todo y devolvemos error.
-            if ($existingAccount && $existingAccount->user_id !== $userId) {
-                return redirect($this->getFrontendUrl() . $targetPath . "?status=error&message=Este correo ya está vinculado a otra cuenta.");
+            // =========================================================================
+            // CORRECCIÓN CRÍTICA: VALIDACIÓN GLOBAL
+            // =========================================================================
+            // Buscamos si este correo O este ID de Google ya existen en la BD (sin importar el usuario)
+            $existingAccount = ConnectedAccount::where(function($query) use ($email, $socialId) {
+                $query->where('email', $email)
+                      ->orWhere('provider_user_id', $socialId);
+            })->first();
+
+            // Si existe la cuenta Y pertenece a OTRO usuario (ID diferente al mío)
+            if ($existingAccount && $existingAccount->user_id != $userId) {
+                Log::warning("Intento de vinculación duplicada: User {$userId} intentó vincular {$email} que pertenece a User {$existingAccount->user_id}");
+                
+                // DETENEMOS TODO AQUI y devolvemos error.
+                // IMPORTANTE: Esto evita que llegue al 'linked_success' de abajo.
+                return redirect($this->getFrontendUrl() . $targetPath . "?status=error&message=Esta cuenta de correo ya está vinculada a otro usuario.");
             }
+            // =========================================================================
 
             $providerName = $driver === 'azure' ? 'outlook' : 'google';
             $provider = EmailProvider::where('name', $providerName)->first();
 
             if (!$provider) {
-                Log::error("Proveedor de email no encontrado: {$providerName}");
-                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Proveedor no configurado");
+                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Proveedor no configurado en el sistema");
             }
 
+            // Si pasamos la validación, ahora sí Guardamos/Actualizamos
             ConnectedAccount::updateOrCreate(
-                // ... (Tus datos existentes) ...
                 [
                     'user_id' => $userId,
-                    'provider_user_id' => $socialUser->getId(),
+                    'provider_user_id' => $socialId, // Buscamos por mi ID y el ID de Google
                 ],
                 [
                     'email_provider_id' => $provider->id,
                     'name' => $socialUser->getName(),
-                    'email' => $socialUser->getEmail(),
+                    'email' => $email,
                     'avatar' => $socialUser->getAvatar(),
                     'token' => $socialUser->token,
-                    'refresh_token' => $socialUser->refreshToken, // <--- IMPORTANTE: Asegúrate de tener esto
+                    'refresh_token' => $socialUser->refreshToken,
                     'expires_at' => property_exists($socialUser, 'expiresIn') ? now()->addSeconds($socialUser->expiresIn) : null,
                 ]
             );
 
-            // --- NUEVO CÓDIGO PARA ENVIAR A N8N ---
+            // Enviar a N8N
+            try {
+                $n8nService->sendProviderIdentifier([
+                    'user_id' => $userId,
+                    'provider' => $providerName,
+                    'email' => $email,
+                    'access_token' => $socialUser->token,
+                    'refresh_token' => $socialUser->refreshToken,
+                    'expires_in' => property_exists($socialUser, 'expiresIn') ? $socialUser->expiresIn : 3600,
+                ]);
+            } catch (\Exception $e) {
+                Log::error("Error enviando a N8N: " . $e->getMessage());
+                // No detenemos el flujo si falla N8N, pero lo logueamos
+            }
 
-            $n8nService->sendProviderIdentifier([ // <--- CORREGIDO: Método correcto del servicio
-                'user_id' => $userId,
-                'provider' => $providerName,
-                'email' => $socialUser->getEmail(),
-                'access_token' => $socialUser->token,
-                'refresh_token' => $socialUser->refreshToken,
-                'expires_in' => property_exists($socialUser, 'expiresIn') ? $socialUser->expiresIn : 3600,
-            ]);
-
-            // ---------------------------------------
-
-
+            // ÉXITO
             return redirect($this->getFrontendUrl() . $targetPath . "?status=linked_success");
+
         } catch (\Exception $e) {
-            Log::error("Error en SocialAuth handleCallback: " . $e->getMessage());
-            $errorPath = (isset($origin) && $origin === 'settings') ? '/settings#email' : '/dashboard';
+            Log::error("Error Fatal en SocialAuth: " . $e->getMessage());
             
-            return redirect($this->getFrontendUrl() . $errorPath . "?status=error&message=Error interno");
+            // REDIRECCIÓN SEGURA EN CASO DE ERROR (CATCH)
+            // Aseguramos que la URL esté bien formada incluso si falla el try
+            return redirect($this->getFrontendUrl() . $targetPath . "?status=error&message=Error interno del servidor");
         }
     }
 
