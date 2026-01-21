@@ -20,6 +20,8 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name(
 
 //PARA LA AUTH
 Route::get('/auth/{driver}/callback', [SocialAuthController::class, 'handleCallback']);
+//PARA AJUSTES para vincular nuevos proveedores
+Route::get('/settings/{driver}/callback', [SocialAuthController::class, 'handleCallbackSettings']);
 
 /*Rutas Protegidas (Necesitan estar autenticado)*/
 Route::middleware('auth:sanctum')->group(function () {

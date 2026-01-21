@@ -31,6 +31,8 @@ class SocialAuthController extends Controller
         // Obtenemos el usuario que está pidiendo
         $user = $request->user();
 
+        $origin = $request->query('origin', 'dashboard');
+
         if (!$user) {
             return response()->json(['error' => 'Usuario no autenticado'], 401);
         }
@@ -40,7 +42,10 @@ class SocialAuthController extends Controller
         $state = Str::random(40);
 
         // Guardamos en caché
-        cache()->put('social_auth_state_' . $state, $user->id, 300);
+        cache()->put('social_auth_state_' . $state, [
+            'user_id' => $user->id,
+            'origin' => $origin
+        ], 300);
 
         $provider = EmailProvider::find($request->provider_id);
 
@@ -91,10 +96,21 @@ class SocialAuthController extends Controller
         try {
 
             $state = $request->input('state');
-            $userId = cache()->pull('social_auth_state_' . $state);
+            $cachedData = cache()->pull('social_auth_state_' . $state);
 
-            if (!$userId) {
-                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=La sesión expiró o es inválida");
+            // Validación robusta por si la caché expiró
+            if (!$cachedData) {
+                // Por defecto mandamos al dashboard si falla algo grave
+                return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Sesión expirada");
+            }
+
+
+            if (is_array($cachedData)) {
+                $userId = $cachedData['user_id'];
+                $origin = $cachedData['origin'];
+            } else {
+                $userId = $cachedData;
+                $origin = 'dashboard';
             }
 
             /** @var \Laravel\Socialite\Two\AbstractProvider $socialiteDriver */
@@ -140,10 +156,73 @@ class SocialAuthController extends Controller
 
             // ---------------------------------------
 
-            return redirect($this->getFrontendUrl() . "/dashboard?status=linked_success");
+            $targetPage = ($origin === 'settings') ? '/settings' : '/dashboard';
+
+            return redirect($this->getFrontendUrl() . $targetPage . "?status=linked_success");
         } catch (\Exception $e) {
             Log::error("Error en SocialAuth handleCallback: " . $e->getMessage());
-            return redirect($this->getFrontendUrl() . "/dashboard?status=error&message=Error interno al vincular cuenta");
+            $errorPage = isset($origin) && $origin === 'settings' ? '/settings' : '/dashboard';
+            return redirect($this->getFrontendUrl() . $errorPage . "?status=error&message=Error interno");
+        }
+    }
+
+    public function handleCallbackSettings(Request $request, $driver, N8nService $n8nService)
+    {
+        try {
+            $state = $request->input('state');
+
+            // Recuperamos el usuario que inició el proceso
+            $userId = cache()->pull('social_auth_state_' . $state);
+
+            if (!$userId) {
+                // CAMBIO AQUI: Redirigir a settings con error
+                return redirect($this->getFrontendUrl() . "/settings?status=error&message=La sesión expiró o es inválida");
+            }
+
+            /** @var \Laravel\Socialite\Two\AbstractProvider $socialiteDriver */
+            $socialiteDriver = Socialite::driver($driver);
+            $socialUser = $socialiteDriver->stateless()->user();
+
+            $providerName = $driver === 'azure' ? 'outlook' : 'google';
+            $provider = EmailProvider::where('name', $providerName)->first();
+
+            if (!$provider) {
+                Log::error("Proveedor de email no encontrado: {$providerName}");
+                return redirect($this->getFrontendUrl() . "/settings?status=error&message=Proveedor no configurado");
+            }
+
+            ConnectedAccount::updateOrCreate(
+                [
+                    'user_id' => $userId,
+                    'provider_user_id' => $socialUser->getId(),
+                ],
+                [
+                    'email_provider_id' => $provider->id,
+                    'name' => $socialUser->getName(),
+                    'email' => $socialUser->getEmail(),
+                    'avatar' => $socialUser->getAvatar(),
+                    'token' => $socialUser->token,
+                    'refresh_token' => $socialUser->refreshToken,
+                    'expires_at' => property_exists($socialUser, 'expiresIn') ? now()->addSeconds($socialUser->expiresIn) : null,
+                ]
+            );
+
+            // Enviar credenciales a N8N
+            $n8nService->sendProviderIdentifier([
+                'user_id' => $userId,
+                'provider' => $providerName,
+                'email' => $socialUser->getEmail(),
+                'access_token' => $socialUser->token,
+                'refresh_token' => $socialUser->refreshToken,
+                'expires_in' => property_exists($socialUser, 'expiresIn') ? $socialUser->expiresIn : 3600,
+            ]);
+
+            // CAMBIO PRINCIPAL: Redirigir a /settings con éxito
+            return redirect($this->getFrontendUrl() . "/settings?status=linked_success");
+        } catch (\Exception $e) {
+            Log::error("Error en SocialAuth handleCallback: " . $e->getMessage());
+            // CAMBIO AQUI: Redirigir a settings con error
+            return redirect($this->getFrontendUrl() . "/settings?status=error&message=Error interno al vincular cuenta");
         }
     }
 }
