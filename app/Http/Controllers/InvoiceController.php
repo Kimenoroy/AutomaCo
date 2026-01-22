@@ -9,19 +9,45 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-
 class InvoiceController extends Controller
 {
     /**
-     * Listar facturas del usuario autenticado
+     * Helper para encontrar factura por cuenta vinculada
+     */
+    private function findInvoiceForUser($invoiceId, $user)
+    {
+        $myAccountIds = $user->connectedAccounts()->pluck('id');
+
+        return Invoice::where('id', $invoiceId)
+            ->whereIn('connected_account_id', $myAccountIds)
+            ->firstOrFail();
+    }
+
+    /**
+     * LISTAR FACTURAS (Aquí es donde tienes el error actual)
      */
     public function index(Request $request)
     {
         $user = $request->user();
 
-        return Invoice::where('user_id', $user->id)
-            ->select(
+        // 1. Obtenemos los IDs de las cuentas (NO del usuario)
+        $myAccountIds = $user->connectedAccounts()->pluck('id');
+
+        // 2. Query corregida: Usamos connected_account_id
+        $query = Invoice::whereIn('connected_account_id', $myAccountIds);
+
+        // 3. Filtro de Perfil (Header del Frontend)
+        $selectedFilter = $request->header('X-Account-ID');
+
+        if ($selectedFilter && $selectedFilter != 'all') {
+            if ($myAccountIds->contains($selectedFilter)) {
+                $query->where('connected_account_id', $selectedFilter);
+            }
+        }
+
+        return $query->select(
                 'id',
+                'connected_account_id',
                 'generation_code',
                 'created_at',
                 'client_name',       
@@ -30,112 +56,88 @@ class InvoiceController extends Controller
                 'pdf_original_name', 
                 'json_original_name' 
             )
+            ->with('connectedAccount:id,email,email_provider_id')
             ->orderBy('client_name', 'asc')
             ->orderBy('created_at', 'desc')
             ->paginate(50); 
     }
 
     /**
-     * Recibir factura desde n8n (POST)
-     * n8n enviará: user_id, pdf_file, json_file
+     * GUARDAR FACTURA (Actualizado para n8n)
      */
     public function store(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
+            'source_email' => 'required|email', // n8n debe enviar esto
             'client_name' => 'required|string',
-            'pdf_file' => 'required|file|mimes:pdf|max:10240', // Max 10MB
-            'json_file' => 'required|file|mimes:json,text|max:5120', // Max 5MB
-            'pdf_date' => 'nullable|date',
-            'json_date' => 'nullable|date',
+            'pdf_file' => 'required|file|mimes:pdf|max:10240',
+            'json_file' => 'required|file|mimes:json,text|max:5120',
         ]);
 
-        // Verificar que el usuario existe
         $user = User::findOrFail($request->user_id);
+        
+        // Buscar cuenta por email
+        $connectedAccount = $user->connectedAccounts()
+                                ->where('email', $request->source_email)
+                                ->first();
+
+        if (!$connectedAccount) {
+            return response()->json(['message' => 'No existe cuenta vinculada para: ' . $request->source_email], 404);
+        }
+
         $clientName = $request->client_name;
+        $pdf = $request->file('pdf_file');
+        $json = $request->file('json_file');
+        $pdfOriginalName = $pdf->getClientOriginalName();
+        $jsonOriginalName = $json->getClientOriginalName();
 
-    $pdf = $request->file('pdf_file');
-    $json = $request->file('json_file');
-
-    // --- LÓGICA PARA OBTENER EL NOMBRE ORIGINAL ---
-    $pdfOriginalName = $pdf->getClientOriginalName();
-    $jsonOriginalName = $json->getClientOriginalName();
-    // ----------------------------------------------
-
-        // Obtener un nombre único (usando json o generar uno)
+        // Procesar JSON
         $content = file_get_contents($json->getRealPath());
         $data = json_decode($content, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json([
-                'message' => 'El archivo JSON no es válido',
-                'error' => json_last_error_msg()
-            ], 400);
+            return response()->json(['message' => 'JSON inválido'], 400);
         }
 
-    $code = $data['generationCode'] ?? $data['codigoGeneracion'] ?? Str::uuid()->toString();
+        $code = $data['generationCode'] ?? $data['codigoGeneracion'] ?? Str::uuid()->toString();
 
-    // Verificar si ya existe
-    if (Invoice::where('generation_code', $code)->exists()) {
-        return response()->json([
-            'message' => 'La factura con este código ya existe',
-            'generation_code' => $code
-        ], 409);
-    }
+        if (Invoice::where('generation_code', $code)->exists()) {
+            return response()->json(['message' => 'Factura ya existe', 'generation_code' => $code], 409);
+        }
 
-        // 1. Guardar archivos en carpeta del Cliente
+        // Guardar archivos
         $folderName = Str::slug($clientName);
         $folder = 'invoices/' . $folderName . '/' . date('Y/m');
-
         $pdfPath = $pdf->storeAs($folder, "{$code}.pdf", 'public');
         $jsonPath = $json->storeAs($folder, "{$code}.json", 'public');
 
-        //Registro de los nombre y fecha originales de los archivos
-        $originalPdfName = $pdf->getClientOriginalName();
-        $originalJsonName = $json->getClientOriginalName();
-        $pdfCreatedAt = $request->input('pdf_date', now());
-        $jsonCreatedAt = $request->input('json_date', now());
-
-        // Registrar en Base de Datos
+        // CREAR FACTURA (Usando connected_account_id)
         $invoice = Invoice::create([
-            'user_id' => $user->id,
+            'connected_account_id' => $connectedAccount->id, // <--- CAMBIO IMPORTANTE
             'client_name' => $clientName,
             'generation_code' => $code,
             'pdf_path' => $pdfPath,
             'json_path' => $jsonPath,
-
-            'pdf_original_name' => $originalPdfName,
-            'json_original_name' => $originalJsonName,
-            'pdf_created_at' => $pdfCreatedAt,
-            'json_created_at' => $jsonCreatedAt,
+            'pdf_original_name' => $pdfOriginalName,
+            'json_original_name' => $jsonOriginalName,
+            'pdf_created_at' => $request->input('pdf_date', now()),
+            'json_created_at' => $request->input('json_date', now()),
         ]);
 
         return response()->json([
             'message' => 'Factura guardada exitosamente',
-            'invoice' => [
-                'id' => $invoice->id,
-                'generation_code' => $invoice->generation_code,
-                'created_at' => $invoice->created_at,
-            ]
+            'invoice' => ['id' => $invoice->id]
         ], 201);
     }
 
-
-    /**
-     * Descargar PDF de la factura
-     */
     public function downloadPdf(Request $request, $id)
     {
         $user = $request->user();
-
-        $invoice = Invoice::where('id', $id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
+        $invoice = $this->findInvoiceForUser($id, $user);
 
         if (!Storage::disk('public')->exists($invoice->pdf_path)) {
-            return response()->json([
-                'message' => 'El archivo PDF no existe'
-            ], 404);
+            return response()->json(['message' => 'El archivo PDF no existe'], 404);
         }
 
         $filename = str_replace(['/', '\\'], '-', $invoice->generation_code) . '.pdf';
@@ -143,21 +145,13 @@ class InvoiceController extends Controller
         return response()->download($path, $filename);
     }
 
-    /**
-     * Descargar JSON de la factura
-     */
     public function downloadJson(Request $request, $id)
     {
         $user = $request->user();
-
-        $invoice = Invoice::where('id', $id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
+        $invoice = $this->findInvoiceForUser($id, $user);
 
         if (!Storage::disk('public')->exists($invoice->json_path)) {
-            return response()->json([
-                'message' => 'El archivo JSON no existe'
-            ], 404);
+            return response()->json(['message' => 'El archivo JSON no existe'], 404);
         }
 
         $filename = str_replace(['/', '\\'], '-', $invoice->generation_code) . '.json';
@@ -165,16 +159,10 @@ class InvoiceController extends Controller
         return response()->download($path, $filename);
     }
 
-    /**
-     * Ver detalles de la factura
-     */
     public function show(Request $request, $id)
     {
         $user = $request->user();
-
-        $invoice = Invoice::where('id', $id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
+        $invoice = $this->findInvoiceForUser($id, $user);
 
         return response()->json([
             'invoice' => [

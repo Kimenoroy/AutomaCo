@@ -9,23 +9,21 @@ class Invoice extends Model
 {
     use HasFactory;
     
-    protected $fillable = [
-        'user_id',
-        'client_name',
-        'generation_code',
-        'pdf_path',
-        'json_path',
-        'pdf_original_name',
-        'pdf_created_at',
-        'json_original_name',
-        'json_created_at',
-    ];
+ // app/Models/Invoice.php
+protected $fillable = [
+    'connected_account_id', // <--- Asegúrate que diga esto y NO user_id
+    'client_name',
+    'generation_code',
+    'pdf_path',
+    'json_path',
+    'pdf_original_name',
+    'pdf_created_at',
+    'json_original_name',
+    'json_created_at',
+];
 
-    /**
-     * Relación con usuario
-     */
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+public function connectedAccount()
+{
+    return $this->belongsTo(ConnectedAccount::class);
+}
 }

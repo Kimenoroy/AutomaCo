@@ -59,4 +59,9 @@ class ConnectedAccount extends Model
     {
         return $this->belongsTo(EmailProvider::class, 'email_provider_id');
     }
+
+    public function invoices()
+{
+    return $this->hasMany(Invoice::class);
+}
 }
