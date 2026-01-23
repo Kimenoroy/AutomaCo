@@ -50,6 +50,12 @@ class ConnectedAccount extends Model
         'expires_at',
     ];
 
+    protected $hidden = [
+        'token',
+        'refresh_token',
+        'expires_at',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -61,7 +67,7 @@ class ConnectedAccount extends Model
     }
 
     public function invoices()
-{
-    return $this->hasMany(Invoice::class);
-}
+    {
+        return $this->hasMany(Invoice::class);
+    }
 }

@@ -12,7 +12,20 @@ class SettingsController extends Controller
     // Obtener configuración actual y cuentas vinculadas
     public function index(Request $request)
     {
-        $user = $request->user()->load('connectedAccounts');
+        // Especificamos qué columnas SÍ queremos traer
+        $user = $request->user()->load(['connectedAccounts' => function ($query) {
+            $query->select(
+                'id',
+                'user_id',
+                'email_provider_id',
+                'provider_user_id',
+                'email',
+                'name',
+                'avatar',
+                'created_at',
+                'updated_at'
+            );
+        }]);
 
         return response()->json([
             'user' => $user,
@@ -57,7 +70,7 @@ class SettingsController extends Controller
 
         // Buscamos la cuenta específica asegurándonos que pertenezca al usuario autenticado
         $account = ConnectedAccount::where('user_id', $user->id)
-            ->where('id', $id) 
+            ->where('id', $id)
             ->firstOrFail();
 
         $account->delete();
