@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\N8nController;
 use App\Http\Controllers\DashboardController;
+use PHPUnit\Framework\Attributes\Group;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
 
@@ -43,11 +44,12 @@ Route::middleware('auth:sanctum')->group(function () {
         //AUTH
         Route::get('/auth/social/redirect', [SocialAuthController::class, 'getRedirectUrl']);
 
-        //USUARIOS
-        Route::get('/users', [UserController::class, 'index']);
-        Route::post('/users', [UserController::class, 'store']);
-        Route::put('/users/{id}', [UserController::class, 'update']);
-        Route::delete('/users/{id}', [UserController::class, 'destroy']);
+        Route::middleware(['admin'])->group(function () {
+            Route::get('/users', [UserController::class, 'index']);
+            Route::post('/users', [UserController::class, 'store']);
+            Route::put('/users/{id}', [UserController::class, 'update']);
+            Route::delete('/users/{id}', [UserController::class, 'destroy']);
+        });
 
         // FACTURAS (INVOICES)
         Route::get('/invoices', [InvoiceController::class, 'index']);
