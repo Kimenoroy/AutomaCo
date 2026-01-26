@@ -21,37 +21,33 @@ class N8nController extends Controller
      */
     public function syncInvoices(Request $request)
     {
-        // 1. Validamos la entrada del frontend
         $request->validate([
-            'user_id' => 'required|integer',
             'email_provider_id' => 'required|integer',
         ]);
 
-        // 2. Buscamos la cuenta conectada específica
-        // Esto permite que el flujo funcione aunque el usuario tenga varios proveedores
         $account = ConnectedAccount::with('provider')
-            ->where('user_id', $request->user_id)
+            ->where('user_id',Auth::id())
             ->where('email_provider_id', $request->email_provider_id)
             ->first();
 
         if (!$account || !$account->refresh_token) {
-            return response()->json(['error' => 'Cuenta no encontrada o falta el refresh_token.'], 404);
+            return response()->json(['error' => 'Cuenta no encontrada.'], 404);
         }
 
 
         $resultado = $this->n8nService->sendProviderIdentifier([
             'user_id'       => $account->user_id,
-            'provider'      => $account->provider->identifier, // Requiere relación con EmailProvider
+            'provider'      => $account->provider->identifier, 
             'email'         => $account->email,
             'access_token'  => $account->token,
             'refresh_token' => $account->refresh_token,
-            'expires_in'    => $account->expires_at, // O el cálculo de segundos restantes
+            'expires_in'    => $account->expires_at, 
         ]);
 
         if ($resultado) {
             return response()->json(['status' => 'Sincronización iniciada con éxito.']);
         }
 
-        return response()->json(['error' => 'Error al contactar con n8n.'], 500);
+        return response()->json(['error' => 'Error al contactar con el servicio.'], 500);
     }
 }
