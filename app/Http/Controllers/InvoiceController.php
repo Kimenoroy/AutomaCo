@@ -24,19 +24,16 @@ class InvoiceController extends Controller
     }
 
     /**
-     * LISTAR FACTURAS (Aquí es donde tienes el error actual)
+     * LISTAR FACTURAS 
      */
     public function index(Request $request)
     {
         $user = $request->user();
 
-        // 1. Obtenemos los IDs de las cuentas (NO del usuario)
         $myAccountIds = $user->connectedAccounts()->pluck('id');
 
-        // 2. Query corregida: Usamos connected_account_id
         $query = Invoice::whereIn('connected_account_id', $myAccountIds);
 
-        // 3. Filtro de Perfil (Header del Frontend)
         $selectedFilter = $request->header('X-Account-ID');
 
         if ($selectedFilter && $selectedFilter != 'all') {
@@ -63,13 +60,20 @@ class InvoiceController extends Controller
     }
 
     /**
-     * GUARDAR FACTURA (Actualizado para n8n)
+     * GUARDAR FACTURA 
      */
     public function store(Request $request)
     {
+
+        $secret = env('N8N_WEBHOOK_SECRET');
+
+        if (!$secret || $request->header('X-Webhook-Secret') !== $secret) {
+            return response()->json(['message' => 'Acceso denegado: Secreto inválido.'], 403);
+        }
+
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'source_email' => 'required|email', // n8n debe enviar esto
+            'source_email' => 'required|email', 
             'client_name' => 'required|string',
             'pdf_file' => 'required|file|mimes:pdf|max:10240',
             'json_file' => 'required|file|mimes:json,text|max:5120',
