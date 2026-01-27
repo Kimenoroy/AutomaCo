@@ -29,10 +29,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ruta para activar cuenta (no requiere cuenta activada)
     Route::post('/activate', [AuthController::class, 'activate'])->name("activate");
+    Route::post('/logout', [AuthController::class, 'logout']);
 
     // Rutas que requieren cuenta activada
     Route::middleware('account.active')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
 
         //Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index']);
