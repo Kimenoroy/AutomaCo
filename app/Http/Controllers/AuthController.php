@@ -227,6 +227,23 @@ class AuthController extends Controller
         }
     }
 
+    // OBTENER USUARIO AUTENTICADO 
+    public function me(Request $request)
+    {
+        // Obtiene el usuario automáticamente basado en el Token enviado
+        $user = $request->user(); 
+
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role, 
+            'is_active' => (bool) $user->is_active,
+        ];
+
+        return response()->json($userData);
+    }
+
     // ELIMINADO: public function selectProvider(...) 
     // Motivo: La vinculación ahora se maneja vía OAuth en SocialAuthController
 }

@@ -31,6 +31,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/activate', [AuthController::class, 'activate'])->name("activate");
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    // Esta ruta devuelve al usuario actual
+    Route::get('/auth/me', [AuthController::class, 'me']);
+
     // Rutas que requieren cuenta activada
     Route::middleware('account.active')->group(function () {
 
