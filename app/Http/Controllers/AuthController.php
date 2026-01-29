@@ -241,7 +241,7 @@ class AuthController extends Controller
             'is_active' => (bool) $user->is_active,
         ];
 
-        return response()->json($userData);
+        return response()->json(['user' => $userData]);
     }
 
     // ELIMINADO: public function selectProvider(...) 
