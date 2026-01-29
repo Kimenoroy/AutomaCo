@@ -18,7 +18,7 @@ return new class extends Migration
          $table->timestamp('used_at')->nullable();
 
          //relacion con la table users
-         $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+         $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
          $table->timestamps();
 
         });

@@ -164,8 +164,8 @@ class AuthController extends Controller
 
             //Buscar el código de activación
             $codeHash = hash('sha256', $request->code);
+
             $activationCode = ActivationCode::where('code_hash', $codeHash)
-                ->where('user_id', $user->id)
                 ->where('is_used', false)
                 ->first();
 
@@ -182,6 +182,7 @@ class AuthController extends Controller
                 $user->save();
 
                 $activationCode->is_used = true;
+                $activationCode->user_id = $user->id;
                 $activationCode->used_at = now();
                 $activationCode->save();
             });

@@ -13,27 +13,21 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**Seed the application's database.*/
-  public function run(): void{// Seedear proveedores de email$this->call([EmailProviderSeeder::class,]);
+    public function run(): void
+    {// Seedear proveedores de email$this->call([EmailProviderSeeder::class,]);
 
         // User::factory(10)->create();
 
         User::factory()->create([
             'name' => 'Admin Facturacion',
-        'email' => 'admin@empresa.com',
-        'password' => bcrypt('password123'),
+            'email' => 'admin@empresa.com',
+            'password' => bcrypt('password123'),
         ]);
 
-        // 3. Usuario de Prueba (Inactivo)
-        $userInactivo = User::factory()->create([
-            'name' => 'Usuario Nuevo',
-            'email' => 'nuevo@prueba.com',
-            'password' => bcrypt('password123'),
-            'is_active' => false,
-        ]);
 
         ActivationCode::create([
-            'user_id' => $userInactivo->id,
-            'code_hash' => hash('sha256', 'CODIGO2026'),
+            'user_id' => null, // <--- IMPORTANTE: Sin dueño al nacer
+            'code_hash' => hash('sha256', '123456'), // Código conocido para probar
             'is_used' => false,
         ]);
 
