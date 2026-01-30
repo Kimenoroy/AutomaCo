@@ -52,8 +52,10 @@ class SettingsController extends Controller
     public function updatePassword(Request $request)
     {
         $request->validate([
-            'current_password' => 'required|current_password', // Valida que la actual sea correcta
-            'password' => 'required|string|min:8|confirmed',
+            'current_password' => 'required|current_password',
+            'password' => 'required|string|min:8|confirmed|different:current_password', 
+        ], [
+            'password.different' => 'La nueva contraseña no puede ser igual a la actual.'
         ]);
 
         $request->user()->update([
