@@ -22,14 +22,17 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin Facturacion',
             'email' => 'admin@empresa.com',
             'password' => bcrypt('password123'),
+            'role' => 'admin',
         ]);
 
 
         ActivationCode::create([
             'user_id' => null, // <--- IMPORTANTE: Sin dueño al nacer
-            'code_hash' => hash('sha256', '123456'), // Código conocido para probar
+            'code_hash' => hash('sha256', '654321'), // Código conocido para probar
             'is_used' => false,
-        ]);
+        ],
+        
+    );
 
     }
 }
