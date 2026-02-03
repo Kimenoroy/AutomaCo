@@ -43,20 +43,20 @@ class InvoiceController extends Controller
         }
 
         return $query->select(
-                'id',
-                'connected_account_id',
-                'generation_code',
-                'created_at',
-                'client_name',       
-                'pdf_created_at',    
-                'json_created_at',   
-                'pdf_original_name', 
-                'json_original_name' 
-            )
+            'id',
+            'connected_account_id',
+            'generation_code',
+            'created_at',
+            'client_name',
+            'pdf_created_at',
+            'json_created_at',
+            'pdf_original_name',
+            'json_original_name'
+        )
             ->with('connectedAccount:id,email,email_provider_id')
             ->orderBy('client_name', 'asc')
             ->orderBy('created_at', 'desc')
-            ->paginate(50); 
+            ->paginate(50);
     }
 
     /**
@@ -73,18 +73,18 @@ class InvoiceController extends Controller
 
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'source_email' => 'required|email', 
+            'source_email' => 'required|email',
             'client_name' => 'required|string',
             'pdf_file' => 'required|file|mimes:pdf|max:10240',
             'json_file' => 'required|file|mimes:json,text|max:5120',
         ]);
 
         $user = User::findOrFail($request->user_id);
-        
+
         // Buscar cuenta por email
         $connectedAccount = $user->connectedAccounts()
-                                ->where('email', $request->source_email)
-                                ->first();
+            ->where('email', $request->source_email)
+            ->first();
 
         if (!$connectedAccount) {
             return response()->json(['message' => 'No existe cuenta vinculada para: ' . $request->source_email], 404);
@@ -104,7 +104,26 @@ class InvoiceController extends Controller
             return response()->json(['message' => 'JSON inválido'], 400);
         }
 
-        $code = $data['generationCode'] ?? $data['codigoGeneracion'] ?? Str::uuid()->toString();
+        $code = $data['generationCode']
+            ?? $data['codigoGeneracion']
+            ?? $data['identificacion']['codigoGeneracion']
+            ?? null;
+
+
+        if (!$code) {
+            $code = hash('sha256', $content);
+        }
+
+        $existingInvoice = Invoice::where('generation_code', $code)->first();
+
+        if ($existingInvoice) {
+            return response()->json([
+                'message' => 'Factura ya procesada anteriormente (Omitida)',
+                'status'  => 'skipped',
+                'generation_code' => $code,
+                'invoice_id' => $existingInvoice->id
+            ], 200);
+        }
 
         if (Invoice::where('generation_code', $code)->exists()) {
             return response()->json(['message' => 'Factura ya existe', 'generation_code' => $code], 409);
