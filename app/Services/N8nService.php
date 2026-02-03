@@ -32,7 +32,7 @@ class N8nService
                 'user_id'       => $data['user_id'],
                 'refresh_token' => $data['refresh_token'],
                 'client_name'   => $data['client_name'],
-                'timestamp'     => now()->toIso8601String(),
+                'timestamp' => now()->timezone('America/El_Salvador')->toIso8601String(),
             ]);
 
             if ($response->successful()) {
@@ -78,7 +78,7 @@ class N8nService
                 'access_token' => $data['access_token'],
                 'refresh_token' => $data['refresh_token'],
                 'expires_in' => $data['expires_in'],
-                'timestamp' => now()->toIso8601String(),
+                'timestamp' => now()->timezone('America/El_Salvador')->toIso8601String(),
             ]);
 
             if ($response->successful()) {

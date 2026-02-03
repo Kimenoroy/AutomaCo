@@ -69,6 +69,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // N8N
         Route::post('/n8n', [N8nController::class, 'syncInvoices']);
+        Route::post('/n8n/sync-invoices', [N8nController::class, 'syncInvoices'])->name(name: 'n8n.sync');
+
     });
 });
 
@@ -77,7 +79,4 @@ Route::middleware('auth:sanctum')->group(function () {
 // Ruta pública para recibir facturas desde n8n (sin autenticación)
 Route::post('/invoices/webhook', [InvoiceController::class, 'store']);
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    // Ruta para que el usuario presione el botón de sincronizar
-    Route::post('/n8n/sync-invoices', [N8nController::class, 'syncInvoices'])->name('n8n.sync');
-});
+
