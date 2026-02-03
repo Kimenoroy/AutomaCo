@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
+use App\Models\User;
 
 class PasswordResetController extends Controller
 {
@@ -33,7 +34,18 @@ class PasswordResetController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|confirmed|min:8',
+            'password' => [
+                'required','confirmed','min:8',
+
+                //Funcion para encontrar el correo del usuario
+                function ($attribute, $value, $fail) use ($request) {
+                    $user = User::where('email', $request->email)->first();
+                    //Verificar si ya existe la contrasenia del usuario 
+                    if ($user && Hash::check($value, $user->password)) {
+                        $fail('La nueva contraseña no puede ser igual a la anterior.');
+                    }
+                }
+            ],
         ]);
 
         //Intentar restablecer la contraseña

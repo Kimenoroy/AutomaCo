@@ -9,27 +9,21 @@ class Invoice extends Model
 {
     use HasFactory;
     
-    protected $fillable = [
-        'generation_code',
-        'control_number',
-        'stamp',
-        'provider_name',
-        'provider_nit',
-        'issue_date',
-        'taxable_amount',
-        'fovial_amount',
-        'total_amount',
-        'status',
-        'pdf_path',
-        'json_path',
-        'raw_data'
-    ];
+ // app/Models/Invoice.php
+protected $fillable = [
+    'connected_account_id', // <--- Asegúrate que diga esto y NO user_id
+    'client_name',
+    'generation_code',
+    'pdf_path',
+    'json_path',
+    'pdf_original_name',
+    'pdf_created_at',
+    'json_original_name',
+    'json_created_at',
+];
 
-    /* Convertir automáticamente el JSON a array de PHP y fechas a objetos Carbon */
-     protected $casts = [
-        'issue_date' => 'datetime',
-        'raw_data' => 'array',
-        'taxable_amount' => 'decimal:2',
-        'total_amount' => 'decimal:2',
-    ];
+public function connectedAccount()
+{
+    return $this->belongsTo(ConnectedAccount::class);
+}
 }

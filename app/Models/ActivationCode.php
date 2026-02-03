@@ -18,8 +18,14 @@ class ActivationCode extends Model
         'used_at' => 'datetime'
     ];
 
+    protected $hidden = [
+        'code_hash',
+        'created_at',
+        'updated_at',
+    ];
+
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->select('id', 'name', 'email', 'avatar');;
     }
 }
