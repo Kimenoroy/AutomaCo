@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\N8nController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ActivationCodeController;
 use PHPUnit\Framework\Attributes\Group;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
@@ -52,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/users', [UserController::class, 'store']);
             Route::put('/users/{id}', [UserController::class, 'update']);
             Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+            Route::apiResource('activation-codes', ActivationCodeController::class)->only(['index', 'store', 'destroy']);
         });
 
         // FACTURAS (INVOICES)
