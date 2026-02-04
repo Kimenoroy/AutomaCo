@@ -23,6 +23,8 @@ return [
     'allowed_origins' => [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
+        'http://automaco.net/',
+        'https://automaco.net/',
     ],
 
     'allowed_origins_patterns' => [],
@@ -33,6 +35,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true, 
+    'supports_credentials' => true,
 
 ];
