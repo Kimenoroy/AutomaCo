@@ -54,7 +54,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/users/{id}', [UserController::class, 'update']);
             Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-            Route::apiResource('activation-codes', ActivationCodeController::class)->only(['index', 'store', 'destroy']);
+            
+            Route::get('/activation-codes', [ActivationCodeController::class, 'index']);
+            Route::post('/activation-codes', [ActivationCodeController::class, 'store']);
+            Route::delete('/activation-codes', [ActivationCodeController::class, 'destroy']);
         });
 
         // FACTURAS (INVOICES)
