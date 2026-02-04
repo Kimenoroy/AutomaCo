@@ -19,7 +19,7 @@ class SocialAuthController extends Controller
     private function getFrontendUrl()
     {
         // Obtener la variable
-        $url = config('services.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+        $url = config('services.frontend_url', env('FRONTEND_URL', 'https://automaco.net'));
 
         // Limpieza: Quitar barra al final si la tiene (para evitar doble //)
         $url = rtrim($url, '/');
