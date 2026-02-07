@@ -26,6 +26,6 @@ class ActivationCode extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class)->select('id', 'name', 'email', 'avatar');;
+        return $this->belongsTo(User::class)->select('id', 'name', 'email');;
     }
 }
