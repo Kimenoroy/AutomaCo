@@ -25,6 +25,7 @@ return [
         'http://127.0.0.1:5173',
         'http://automaco.net',
         'https://automaco.net',
+        'https://www.automaco.net',
         'https://automaco.app.n8n.cloud/webhook/8c60f59c-6a60-47ad-be6d-847660a1d39a',
         'https://automaco.app.n8n.cloud/webhook-test/8c60f59c-6a60-47ad-be6d-847660a1d39a',
     ],
