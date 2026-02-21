@@ -65,6 +65,14 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
 
+        return response()->json([
+            'mensaje' => 'Modo espía activado',
+            'todos_los_datos_texto' => $request->all(),
+            'tiene_archivo_pdf' => $request->hasFile('pdf_file'),
+            'tiene_archivo_json' => $request->hasFile('json_file'),
+            'nombres_de_los_archivos_que_llegaron' => array_keys($request->allFiles())
+        ]);
+
         $secret = env('N8N_WEBHOOK_SECRET');
 
         if (!$secret || $request->header('X-Webhook-Secret') !== $secret) {
