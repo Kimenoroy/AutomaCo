@@ -75,8 +75,8 @@ class InvoiceController extends Controller
             'user_id' => 'required|exists:users,id',
             'source_email' => 'required|email',
             'client_name' => 'required|string',
-            'pdf_file' => 'required|file|mimes:pdf|max:10240',
-            'json_file' => 'required|file|mimes:json,text|max:5120',
+            'pdf_file' => 'nullable|file|mimes:pdf|max:10240',
+            'json_file' => 'nullable|file|mimes:json,text|max:5120',
         ]);
 
         $user = User::findOrFail($request->user_id);
@@ -100,10 +100,19 @@ class InvoiceController extends Controller
         $content = file_get_contents($json->getRealPath());
         $data = json_decode($content, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json(['message' => 'JSON inválido'], 400);
-        }
+        if ($json) {
+            $content = file_get_contents($json->getRealPath());
+            $data = json_decode($content, true);
 
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return response()->json(['message' => 'JSON inválido'], 400);
+            }
+
+            $code = $data['generationCode']
+                ?? $data['codigoGeneracion']
+                ?? $data['identificacion']['codigoGeneracion']
+                ?? null;
+        }
         $code = $data['generationCode']
             ?? $data['codigoGeneracion']
             ?? $data['identificacion']['codigoGeneracion']
@@ -119,7 +128,7 @@ class InvoiceController extends Controller
         if ($existingInvoice) {
             return response()->json([
                 'message' => 'Factura ya procesada anteriormente (Omitida)',
-                'status'  => 'skipped',
+                'status' => 'skipped',
                 'generation_code' => $code,
                 'invoice_id' => $existingInvoice->id
             ], 200);
