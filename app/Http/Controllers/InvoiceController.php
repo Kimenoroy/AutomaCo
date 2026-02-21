@@ -65,13 +65,15 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
 
+        /*
         return response()->json([
-            'mensaje' => 'Modo espía activado',
+            'mensaje' => 'debug',
             'todos_los_datos_texto' => $request->all(),
             'tiene_archivo_pdf' => $request->hasFile('pdf_file'),
             'tiene_archivo_json' => $request->hasFile('json_file'),
             'nombres_de_los_archivos_que_llegaron' => array_keys($request->allFiles())
         ]);
+    */
 
         $secret = env('N8N_WEBHOOK_SECRET');
 
@@ -101,12 +103,12 @@ class InvoiceController extends Controller
         $clientName = $request->client_name;
         $pdf = $request->file('pdf_file');
         $json = $request->file('json_file');
-        $pdfOriginalName = $pdf->getClientOriginalName();
-        $jsonOriginalName = $json->getClientOriginalName();
+        $pdfOriginalName = $pdf ? $pdf->getClientOriginalName() : null;
+        $jsonOriginalName = $json ? $json->getClientOriginalName() : null;
 
-        // Procesar JSON
-        $content = file_get_contents($json->getRealPath());
-        $data = json_decode($content, true);
+        $code = null;
+        $content = '';
+        $data = [];
 
         if ($json) {
             $content = file_get_contents($json->getRealPath());
@@ -121,11 +123,6 @@ class InvoiceController extends Controller
                 ?? $data['identificacion']['codigoGeneracion']
                 ?? null;
         }
-        $code = $data['generationCode']
-            ?? $data['codigoGeneracion']
-            ?? $data['identificacion']['codigoGeneracion']
-            ?? null;
-
 
         if (!$code) {
             $code = hash('sha256', $content);
