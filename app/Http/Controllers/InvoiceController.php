@@ -124,8 +124,10 @@ class InvoiceController extends Controller
                 ?? null;
         }
 
+        // Generar un código único si no venía en el JSON
         if (!$code) {
-            $code = hash('sha256', $content);
+            // Le agregamos uniqid() para que NUNCA se repita el código si faltó el JSON
+            $code = hash('sha256', $content . uniqid(time(), true));
         }
 
         $existingInvoice = Invoice::where('generation_code', $code)->first();
@@ -143,13 +145,14 @@ class InvoiceController extends Controller
             return response()->json(['message' => 'Factura ya existe', 'generation_code' => $code], 409);
         }
 
-        // Guardar archivos
         $folderName = Str::slug($clientName);
         $folder = 'invoices/' . $folderName . '/' . date('Y/m');
-        $pdfPath = $pdf->storeAs($folder, "{$code}.pdf", 'public');
-        $jsonPath = $json->storeAs($folder, "{$code}.json", 'public');
 
-        // CREAR FACTURA (Usando connected_account_id)
+        // Guardar solo si existen (si no existen, la ruta será null)
+        $pdfPath = $pdf ? $pdf->storeAs($folder, "{$code}.pdf", 'public') : null;
+        $jsonPath = $json ? $json->storeAs($folder, "{$code}.json", 'public') : null;
+
+        // CREAR FACTURA
         $invoice = Invoice::create([
             'connected_account_id' => $connectedAccount->id,
             'client_name' => $clientName,
@@ -160,7 +163,6 @@ class InvoiceController extends Controller
             'json_original_name' => $jsonOriginalName,
 
             'pdf_created_at' => $pdf ? $request->input('pdf_date', now()) : null,
-
             'json_created_at' => $json ? $request->input('json_date', now()) : null,
         ]);
 
