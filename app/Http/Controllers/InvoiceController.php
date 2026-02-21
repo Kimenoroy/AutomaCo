@@ -146,15 +146,17 @@ class InvoiceController extends Controller
 
         // CREAR FACTURA (Usando connected_account_id)
         $invoice = Invoice::create([
-            'connected_account_id' => $connectedAccount->id, // <--- CAMBIO IMPORTANTE
+            'connected_account_id' => $connectedAccount->id,
             'client_name' => $clientName,
             'generation_code' => $code,
             'pdf_path' => $pdfPath,
             'json_path' => $jsonPath,
             'pdf_original_name' => $pdfOriginalName,
             'json_original_name' => $jsonOriginalName,
-            'pdf_created_at' => $request->input('pdf_date', now()),
-            'json_created_at' => $request->input('json_date', now()),
+
+            'pdf_created_at' => $pdf ? $request->input('pdf_date', now()) : null,
+
+            'json_created_at' => $json ? $request->input('json_date', now()) : null,
         ]);
 
         return response()->json([
