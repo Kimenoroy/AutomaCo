@@ -40,12 +40,12 @@ class ActivationCodeController extends Controller
             $activationCode = ActivationCode::create([
                 'code_hash' => $codeHash,
                 'is_used' => false,
-                'user_id' => null, 
+                'user_id' => null,
             ]);
 
             return response()->json([
                 'message' => 'Código generado correctamente',
-                'code' => $rawCode, 
+                'code' => $rawCode,
                 'data' => $activationCode
             ], 201);
         } catch (Exception $e) {
@@ -66,5 +66,24 @@ class ActivationCodeController extends Controller
             Log::error("Fallo al eliminar código: " . $e->getMessage());
             return response()->json(['message' => 'Fallo al intentar eliminar el código.'], 500);
         }
+    }
+
+    public function confirmPassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        if (\Hash::check($request->password, $request->user()->password)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Contraseña confirmada correctamente.'
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'La contraseña es incorrecta.'
+        ], 403);
     }
 }
