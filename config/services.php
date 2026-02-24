@@ -53,4 +53,11 @@ return [
         'tenant' => env('AZURE_TENANT_ID', 'common'),
     ],
 
+    'wompi' => [
+        'app_id' => env('WOMPI_APP_ID'),
+        'api_secret' => env('WOMPI_API_SECRET'),
+        'base_url' => env('WOMPI_BASE_URL', 'https://api.wompi.sv'),
+        'id_url' => env('WOMPI_ID_URL', 'https://id.wompi.sv'),
+    ]
+
 ];

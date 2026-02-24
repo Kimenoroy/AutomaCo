@@ -1,15 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\PasswordResetController;
-use App\Http\Controllers\SocialAuthController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\N8nController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ActivationCodeController;
+use App\Http\Controllers\Private\AuthController;
+use App\Http\Controllers\Private\InvoiceController;
+use App\Http\Controllers\Private\PasswordResetController;
+use App\Http\Controllers\Private\SocialAuthController;
+use App\Http\Controllers\Private\UserController;
+use App\Http\Controllers\Private\SettingsController;
+use App\Http\Controllers\Private\N8nController;
+use App\Http\Controllers\Private\DashboardController;
+use App\Http\Controllers\Private\ActivationCodeController;
+use App\Http\Controllers\Public\PaymentController;
 use PHPUnit\Framework\Attributes\Group;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
@@ -80,6 +81,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     });
 });
+
+// Rutas de Pagos
+Route::middleware('auth:sanctum')->post('/payments/create', [PaymentController::class, 'createPaymentLink']);
+Route::post('/payments/webhook', [PaymentController::class, 'handleWebhook']);
 
 
 

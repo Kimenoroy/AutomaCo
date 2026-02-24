@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Private;
 
+use App\Http\Controllers\Controller;
 use App\Services\N8nService;
 use App\Models\ConnectedAccount;
 use Illuminate\Http\Request;
@@ -45,12 +46,12 @@ class N8nController extends Controller
 
         // 5. Enviar datos al servicio N8n
         $resultado = $this->n8nService->sendProviderIdentifier([
-            'user_id'       => $account->user_id,
-            'provider'      => $account->provider->identifier, 
-            'email'         => $account->email,
-            'access_token'  => $account->token,
+            'user_id' => $account->user_id,
+            'provider' => $account->provider->identifier,
+            'email' => $account->email,
+            'access_token' => $account->token,
             'refresh_token' => $account->refresh_token,
-            'expires_in'    => $account->expires_at, 
+            'expires_in' => $account->expires_at,
         ]);
 
         if ($resultado) {

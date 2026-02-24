@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Private;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -21,7 +22,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8', 
+            'password' => 'required|string|min:8',
             'is_active' => 'required|boolean',
             'role' => 'required|in:admin,client',
         ]);
@@ -55,7 +56,7 @@ class UserController extends Controller
             'role' => $request->role,
             'is_active' => $request->is_active,
         ]);
-        
+
         // Si envían password, lo actualizamos aparte
         if ($request->filled('password')) {
             $user->update(['password' => Hash::make($request->password)]);
@@ -68,7 +69,7 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
-        
+
         // Evitar que te borres a ti mismo
         if ($user->id === auth()->id()) {
             return response()->json(['message' => 'No puedes eliminar tu propia cuenta'], 403);

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Private;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
@@ -14,10 +14,10 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $year = $request->input('year', date('Y'));
-        $accountId = $request->input('account_id'); 
+        $accountId = $request->input('account_id');
 
         // --- LÓGICA DE FILTRADO DE CUENTAS ---
-        
+
         // Iniciamos la consulta base de Invoices
         $query = Invoice::query();
 
@@ -36,7 +36,7 @@ class DashboardController extends Controller
         } else {
             // Buscamos los IDs de todas las cuentas conectadas de este usuario
             $userAccountIds = $user->connectedAccounts()->pluck('id');
-            
+
             // Filtramos las facturas que pertenezcan a CUALQUIERA de sus cuentas
             $query->whereIn('connected_account_id', $userAccountIds);
         }
@@ -49,12 +49,22 @@ class DashboardController extends Controller
         $listQuery = clone $query;
 
         // --- DATOS PARA LA GRÁFICA ---
-        
+
         $months = [
-            1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr', 5 => 'May', 6 => 'Jun',
-            7 => 'Jul', 8 => 'Ago', 9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic'
+            1 => 'Ene',
+            2 => 'Feb',
+            3 => 'Mar',
+            4 => 'Abr',
+            5 => 'May',
+            6 => 'Jun',
+            7 => 'Jul',
+            8 => 'Ago',
+            9 => 'Sep',
+            10 => 'Oct',
+            11 => 'Nov',
+            12 => 'Dic'
         ];
-        
+
         $chartData = [];
         foreach ($months as $num => $name) {
             $chartData[$num] = ['month' => $name, 'emails' => 0];
@@ -74,7 +84,7 @@ class DashboardController extends Controller
         $finalChartData = array_values($chartData);
 
         // --- DATOS PARA CORREOS RECIENTES ---
-        
+
         $recentEmails = $listQuery
             ->orderBy('created_at', 'desc')
             ->take(5)

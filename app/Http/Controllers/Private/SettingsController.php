@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Private;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -13,19 +14,21 @@ class SettingsController extends Controller
     public function index(Request $request)
     {
         // Especificamos qué columnas SÍ queremos traer
-        $user = $request->user()->load(['connectedAccounts' => function ($query) {
-            $query->select(
-                'id',
-                'user_id',
-                'email_provider_id',
-                'provider_user_id',
-                'email',
-                'name',
-                'avatar',
-                'created_at',
-                'updated_at'
-            );
-        }]);
+        $user = $request->user()->load([
+            'connectedAccounts' => function ($query) {
+                $query->select(
+                    'id',
+                    'user_id',
+                    'email_provider_id',
+                    'provider_user_id',
+                    'email',
+                    'name',
+                    'avatar',
+                    'created_at',
+                    'updated_at'
+                );
+            }
+        ]);
 
         return response()->json([
             'user' => $user,
@@ -53,7 +56,7 @@ class SettingsController extends Controller
     {
         $request->validate([
             'current_password' => 'required|current_password',
-            'password' => 'required|string|min:8|confirmed|different:current_password', 
+            'password' => 'required|string|min:8|confirmed|different:current_password',
         ], [
             'password.different' => 'La nueva contraseña no puede ser igual a la actual.'
         ]);

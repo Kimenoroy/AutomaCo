@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Private;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -35,7 +35,9 @@ class PasswordResetController extends Controller
             'token' => 'required',
             'email' => 'required|email',
             'password' => [
-                'required','confirmed','min:8',
+                'required',
+                'confirmed',
+                'min:8',
 
                 //Funcion para encontrar el correo del usuario
                 function ($attribute, $value, $fail) use ($request) {

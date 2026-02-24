@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Private;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -17,54 +17,54 @@ use Exception;
 class AuthController extends Controller
 {
 
-        public function register(Request $request)
-        {
-            try {
-                /*Validar si el correo ya está registrado*/
-                if (User::where('email', $request->email)->exists()) {
-                    return response()->json([
-                        'message' => 'Este correo electrónico ya está registrado. Por favor, use otro correo o inicie sesión.',
-                        'error' => 'email_duplicado',
-                        'email' => $request->email
-                    ], 409); 
-                }
-
-                /*Validar los datos de entrada*/
-                $request->validate([
-                    'name' => 'required|string|max:255',
-                    'email' => 'required|string|email|max:255',
-                    'password' => 'required|string|min:8|confirmed',
-                ]);
-
-                /*Crear el usuario dentro de la base*/
-                $user = User::create([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'password' => Hash::make($request->password),
-                ]);
-
-                /*Crear un token para que el usuario se pueda loguear automaticamente*/
-                $token = $user->createToken('auth_token')->plainTextToken;
-
-                /*Retornar la respuesta con el token y la información del usuario*/
+    public function register(Request $request)
+    {
+        try {
+            /*Validar si el correo ya está registrado*/
+            if (User::where('email', $request->email)->exists()) {
                 return response()->json([
-                    'mensage' => 'Usuario registrado exitosamente',
-                    'access_token' => $token,
-                    'token_type' => 'Bearer',
-                    'user' => $user
-                ], 201);
-            } catch (QueryException $e) {
-                return response()->json([
-                    'message' => 'Error al conectar con la base de datos. Por favor, intente nuevamente más tarde.',
-                    'error' => 'error_base_datos'
-                ], 500);
-            } catch (Exception $e) {
-                return response()->json([
-                    'message' => 'Ocurrió un error inesperado. Por favor, intente nuevamente.',
-                    'error' => 'error_general'
-                ], 500);
+                    'message' => 'Este correo electrónico ya está registrado. Por favor, use otro correo o inicie sesión.',
+                    'error' => 'email_duplicado',
+                    'email' => $request->email
+                ], 409);
             }
+
+            /*Validar los datos de entrada*/
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255',
+                'password' => 'required|string|min:8|confirmed',
+            ]);
+
+            /*Crear el usuario dentro de la base*/
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+
+            /*Crear un token para que el usuario se pueda loguear automaticamente*/
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            /*Retornar la respuesta con el token y la información del usuario*/
+            return response()->json([
+                'mensage' => 'Usuario registrado exitosamente',
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user
+            ], 201);
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => 'Error al conectar con la base de datos. Por favor, intente nuevamente más tarde.',
+                'error' => 'error_base_datos'
+            ], 500);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Ocurrió un error inesperado. Por favor, intente nuevamente.',
+                'error' => 'error_general'
+            ], 500);
         }
+    }
 
     public function login(Request $request)
     {
@@ -88,7 +88,7 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'role' => $user->role, 
+                    'role' => $user->role,
                     'is_active' => (bool) $user->is_active
                 ];
 
@@ -96,7 +96,7 @@ class AuthController extends Controller
                 if (!$user->is_active) {
                     return response()->json([
                         'message' => 'Credenciales correctas, pero requiere activación.',
-                        'require_activation' => true, 
+                        'require_activation' => true,
                         'access_token' => $token,
                         'token_type' => 'Bearer',
                         'user' => $userData
@@ -232,13 +232,13 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         // Obtiene el usuario automáticamente basado en el Token enviado
-        $user = $request->user(); 
+        $user = $request->user();
 
         $userData = [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'role' => $user->role, 
+            'role' => $user->role,
             'is_active' => (bool) $user->is_active,
         ];
 
