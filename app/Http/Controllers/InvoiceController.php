@@ -56,7 +56,7 @@ class InvoiceController extends Controller
             ->with('connectedAccount:id,email,email_provider_id')
             ->orderBy('client_name', 'asc')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(1500);
     }
 
     /**
