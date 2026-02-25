@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Exception; // Importamos la clase Exception
 use Illuminate\Support\Facades\Log; // Para registrar el error real
+use Illuminate\Support\Facades\Crypt;
 
 class ActivationCodeController extends Controller
 {
@@ -15,15 +16,25 @@ class ActivationCodeController extends Controller
     public function index()
     {
         try {
-            // Traemos todos los códigos con la información del usuario vinculado
             $codes = ActivationCode::with('user')
                 ->orderBy('id', 'desc')
                 ->get();
+           
+            $codes->transform(function ($code) {
+                try {
+                    // Creamos una nueva propiedad temporal llamada 'raw_code'
+                    $code->raw_code = Crypt::decryptString($code->code_hash);
+                } catch (Exception $e) {
+                    // Si hay un error (ej. era un hash antiguo), devolvemos null
+                    $code->raw_code = null;
+                }
+                return $code;
+            });
 
             return response()->json($codes);
         } catch (Exception $e) {
             Log::error("Fallo al listar códigos: " . $e->getMessage());
-            return response()->json(['message' => 'Fallo al obtener la lista de códigos.'], 500);
+            return response()->json(['message' => 'Fallo al obtener la lista.'], 500);
         }
     }
 
@@ -31,15 +42,13 @@ class ActivationCodeController extends Controller
     public function store(Request $request)
     {
         try {
-            // 1. Generamos un código aleatorio legible
             $rawCode = strtoupper(Str::random(6));
 
-            // 2. Lo hasheamos para la base de datos
-            $codeHash = hash('sha256', $rawCode);
+            // CAMBIO AQUÍ: Usamos encriptación reversible en lugar de hash
+            $encryptedCode = Crypt::encryptString($rawCode);
 
-            // 3. Guardamos
             $activationCode = ActivationCode::create([
-                'code_hash' => $codeHash,
+                'code_hash' => $encryptedCode, // Guardamos el string encriptado
                 'is_used' => false,
                 'user_id' => null,
             ]);
@@ -51,7 +60,7 @@ class ActivationCodeController extends Controller
             ], 201);
         } catch (Exception $e) {
             Log::error("Fallo al crear código: " . $e->getMessage());
-            return response()->json(['message' => 'Fallo al generar el código de activación.'], 500);
+            return response()->json(['message' => 'Fallo al generar el código.'], 500);
         }
     }
 
