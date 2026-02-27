@@ -83,7 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Rutas de Pagos
-Route::middleware('auth:sanctum')->post('/payments/create', [PaymentController::class, 'createPaymentLink']);
+Route::post('/payments/create', [PaymentController::class, 'createPaymentLink']);
 Route::post('/payments/webhook', [PaymentController::class, 'handleWebhook']);
 
 
