@@ -41,7 +41,7 @@ class PaymentController extends Controller
             Transaction::create([
                 'email' => $request->email,
                 'reference' => $paymentReference,
-                'plan_name' => $request->plan_name, // <-- OJO AQUÍ, debe decir $request->plan_name
+                'plan_name' => $request->plan_name,
                 'amount' => $request->amount,
                 'status' => 'PENDING'
             ]);
@@ -52,71 +52,74 @@ class PaymentController extends Controller
                 $request->plan_name . '(Ref:' . $paymentReference . ')'
             );
 
-            if ($response && isset($response['urlEnlance'])) {
+            $urlPago = $response['urlEnlace'] ?? $response['UrlEnlace'] ?? $response['urlEnlaceLargo'] ?? null;
+
+            if ($urlPago) {
                 return response()->json([
                     'success' => true,
-                    'payment_url' => $response['urlEnlance'],
+                    'payment_url' => $urlPago,
                     'reference' => $paymentReference,
                 ]);
             }
 
-            return response()->json(['success' => false, 'message' => 'Error al generar el enlace de pago'], 500);
-
-
+            return response()->json([
+                'success' => false,
+                'message' => 'Wompi rechazó la petición',
+                'detalle_wompi' => $response
+            ], 500);
         } catch (\Exception $e) {
             Log::error('Error al generar enlace de pago: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error JAJAJAJA'], 500);
         }
-
     }
 
     //Aviso de wompi que el pago fue exitoso
     public function handleWebhook(Request $request)
     {
         $payload = $request->all();
-        Log::info('Wompi webhook recibido:', $payload);
+        Log::info('Wompi webhook recibido:', context: $payload);
 
         try {
-            $estadoTransaccion = $payload['estado'] ?? null;
-            $referencia = $payload['refenrencia'] ?? null;
+            $estadoTransaccion = $payload['ResultadoTransaccion'] ?? null;
 
-            //Se verifica que sea una compra de codigo de activacion que empiece con "ACT-"
-            if (!$referencia || !str_starts_with($referencia, 'ACT-')) {
-                return response()->json(['status' => 'Ignorado'], 200);
+            $nombreProducto = $payload['EnlacePago']['NombreProducto'] ?? '';
+
+            preg_match('/(ACT-[a-zA-Z0-9]+)/', $nombreProducto, $matches);
+            $referencia = $matches[1] ?? null;
+
+            if (!$referencia) {
+                return response()->json(['status' => 'Ignorado, sin referencia ACT'], 200);
             }
 
-            //Se busca el correo guardado temporalmente en la tabla de "transactions"
             $transaction = Transaction::where('reference', $referencia)->first();
 
-            //Se sigue con el flujo solo si el pago estaba pendiente
             if ($transaction && $transaction->status === 'PENDING') {
 
-                if ($estadoTransaccion === 'APROBADO') {
-                    //marcamos la transaccion como pagada
+                if ($estadoTransaccion === 'ExitosaAprobada') {
+
                     $transaction->update(['status' => 'APPROVED']);
 
-                    //Se genera el codigo y se guarda en la tabla "activacion_codes"
                     $rawCode = strtoupper(Str::random(10));
                     ActivationCode::create([
                         'code_hash' => Hash::make($rawCode),
                         'is_used' => false,
-                        'user_id' => null // Esperando a que un usuario lo canjee
+                        'user_id' => null
                     ]);
 
                     Mail::to($transaction->email)
                         ->send(new SendActivationCodeMail($rawCode));
-                } elseif ($estadoTransaccion === 'RECHAZADA' || $estadoTransaccion === 'FALLIDA') {
+
+                    Log::info("EXITO Código generado y enviado a: " . $transaction->email);
+                } else {
                     $transaction->update(['status' => 'REJECTED']);
+                    Log::info("Pago rechazado para la referencia: " . $referencia);
                 }
             }
 
             return response()->json(['status' => 'Recibido correctamente']);
-
         } catch (\Exception $e) {
-            Log::error('Error al generar enlace de pago: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error JAJAJAJA'], 500);
+            Log::error('Error procesando el webhook: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error interno'], 500);
         }
-
-
     }
 }

@@ -52,7 +52,7 @@ class WompiService
 
         $response = Http::withToken($token)
             ->post("{$this->baseUrl}/EnlacePago", [
-                'identificadorEnlacePago' => 0,
+                'identificadorEnlaceComercio' => 'LNK-' . \Illuminate\Support\Str::random(8),
                 'monto' => $amount,
                 'nombreProducto' => $reason,
                 'formaPago' => [
@@ -64,6 +64,9 @@ class WompiService
                     'esCantidadEditable' => false,
                     'cantidadMaximaVisualizar' => 1,
                     'urlRetorno' => env('FRONTEND_URL', 'http://localhost:5173/') . 'pago/completado',
+
+                    'urlWebhook' => 'https://mouse-coordination-rome-lyrics.trycloudflare.com/api/payments/webhook',
+                    'emailsNotificacion' => 'diegovillegas957@gmail.com'
                 ]
             ]);
 
