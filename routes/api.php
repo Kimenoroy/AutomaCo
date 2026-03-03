@@ -59,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/activation-codes', [ActivationCodeController::class, 'index']);
             Route::post('/activation-codes', [ActivationCodeController::class, 'store']);
             Route::delete('/activation-codes/{id}', [ActivationCodeController::class, 'destroy']);
-            Route::post('/confirm-password', [AuthController::class, 'confirmPassword']);
+            Route::post('/confirm-password', [ActivationCodeController::class, 'confirmPassword']);
         });
 
         // FACTURAS (INVOICES)
