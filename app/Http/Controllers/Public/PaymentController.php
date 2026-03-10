@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Str;
+use \App\Models\Plan;
 
 class PaymentController extends Controller
 {
@@ -29,27 +30,29 @@ class PaymentController extends Controller
     {
         // Validar los datos recibidos desde el frontend
         $request->validate([
-            'email' => 'required|email',
-            'amount' => 'required|numeric|min:1',
-            'plan_name' => 'required|string|max:255', // <-- Cambiado aquí
+            'plan_id' => 'required|exists:plans,id',
         ]);
+
+        $user = $request->user();
+
+        $plan = Plan::find($request->plan_id);
 
         try {
             $paymentReference = 'ACT-' . Str::random(8);
 
             //Guardar la intencion de compra con el correo
             Transaction::create([
-                'email' => $request->email,
+                'email' => $user->email,
                 'reference' => $paymentReference,
-                'plan_name' => $request->plan_name,
-                'amount' => $request->amount,
+                'plan_name' => $plan->name,
+                'amount' => $plan->price,
                 'status' => 'PENDING'
             ]);
 
             //Generar el link en wompi 
             $response = $this->wompiService->createPaymentLink(
-                $request->amount,
-                $request->plan_name . '(Ref:' . $paymentReference . ')'
+                $plan->price,
+                $plan->name . '(Ref:' . $paymentReference . ')'
             );
 
             $urlPago = $response['urlEnlace'] ?? $response['UrlEnlace'] ?? $response['urlEnlaceLargo'] ?? null;

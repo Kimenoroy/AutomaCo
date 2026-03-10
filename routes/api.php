@@ -11,6 +11,7 @@ use App\Http\Controllers\Private\N8nController;
 use App\Http\Controllers\Private\DashboardController;
 use App\Http\Controllers\Private\ActivationCodeController;
 use App\Http\Controllers\Public\PaymentController;
+use App\Http\Controllers\Public\PlanController;
 use PHPUnit\Framework\Attributes\Group;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
@@ -32,6 +33,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Ruta para activar cuenta (no requiere cuenta activada)
     Route::post('/activate', [AuthController::class, 'activate'])->name("activate");
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    //Ruta para poder pagar la suscripción (no requiere cuenta activada)
+    Route::post('/payments/create', [PaymentController::class, 'createPaymentLink']);
+
 
     // Esta ruta devuelve al usuario actual
     Route::get('/auth/me', [AuthController::class, 'me']);
@@ -82,10 +87,12 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-// Rutas de Pagos
-Route::post('/payments/create', [PaymentController::class, 'createPaymentLink']);
+// Ruta de Pago Webhook para recibir notificaciones de pagos (sin autenticación)
 Route::post('/payments/webhook', [PaymentController::class, 'handleWebhook']);
 
+
+//Ruta pública para obtener los planes disponibles (sin autenticación)
+Route::get('/plans', [PlanController::class, 'index']);
 
 
 // Ruta pública para recibir facturas desde n8n (sin autenticación)
