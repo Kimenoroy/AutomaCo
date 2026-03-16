@@ -41,6 +41,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Esta ruta devuelve al usuario actual
     Route::get('/auth/me', [AuthController::class, 'me']);
 
+    //Setting publica y privada
+    Route::get('/public/settings', [SettingsController::class, 'indexPublic']);
+    Route::put('/settings/profile', [SettingsController::class, 'updateProfile']);
+    Route::put('/settings/password', [SettingsController::class, 'updatePassword']);
+
     // Rutas que requieren cuenta activada
     Route::middleware('account.active')->group(function () {
 
@@ -75,15 +80,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // AJUSTES (SETTINGS)
         Route::get('/settings', [SettingsController::class, 'index']);
-        Route::put('/settings/profile', [SettingsController::class, 'updateProfile']);
-        Route::put('/settings/password', [SettingsController::class, 'updatePassword']);
         Route::delete('/settings/provider/{id}', [SettingsController::class, 'unlinkProvider']);
         Route::put('/settings/account', [SettingsController::class, 'destroy']);
 
         // N8N
         Route::post('/n8n', [N8nController::class, 'syncInvoices']);
         Route::post('/n8n/sync-invoices', [N8nController::class, 'syncInvoices'])->name(name: 'n8n.sync');
-
     });
 });
 
@@ -97,5 +99,3 @@ Route::get('/plans', [PlanController::class, 'index']);
 
 // Ruta pública para recibir facturas desde n8n (sin autenticación)
 Route::post('/invoices/webhook', [InvoiceController::class, 'store']);
-
-

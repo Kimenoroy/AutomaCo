@@ -36,6 +36,17 @@ class SettingsController extends Controller
         ]);
     }
 
+    // Visualizar datos del perfil en página pública
+    public function indexPublic(Request $request)
+    {
+        return $request->user()->only([
+            'id',
+            'name',
+            'email',
+            'is_active'
+        ]);
+    }
+
     // Actualizar Perfil (Nombre, Email)
     public function updateProfile(Request $request)
     {
