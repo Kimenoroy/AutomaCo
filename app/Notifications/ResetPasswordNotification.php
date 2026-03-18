@@ -41,12 +41,10 @@ class ResetPasswordNotification extends Notification
         $url = $frontendUrl . '/reset-password?token=' . $this->token . '&email=' . $notifiable->getEmailForPasswordReset();
 
         return (new MailMessage)
-            ->subject('Solicitud de restablecimiento de contraseña') // Asunto del correo
-            ->greeting('¡Hola!') // Saludo inicial
-            ->line('Recibiste este correo porque solicitaste restablecer tu contraseña.') // Texto cuerpo
-            ->action('Restablecer Contraseña', $url) // Texto del botón y URL
-            ->line('Si no solicitaste este cambio, no es necesario realizar ninguna acción.') // Despedida
-            ->salutation('Saludos, el equipo de AutomaCo'); // Firma
+            ->subject('Solicitud de restablecimiento de contraseña - AutomaCo')
+            ->view('mails.reset-password', [
+                'url' => $url
+            ]);
     }
 
     /**

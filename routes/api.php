@@ -12,6 +12,7 @@ use App\Http\Controllers\Private\DashboardController;
 use App\Http\Controllers\Private\ActivationCodeController;
 use App\Http\Controllers\Public\PaymentController;
 use App\Http\Controllers\Public\PlanController;
+use App\Http\Controllers\Public\PublicAuthController;
 use PHPUnit\Framework\Attributes\Group;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
@@ -20,6 +21,10 @@ Route::post("/register", [AuthController::class, "register"])->name("register");
 Route::post('/login', [AuthController::class, 'login'])->name("login");
 Route::post('/send-reset-link', [PasswordResetController::class, 'sendResetLink'])->name("send-reset-link");
 Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name("reset-password");
+
+//publica 
+Route::post('/public/forgot-password', [PublicAuthController::class, 'forgotPasswordPublic']);
+Route::post('/public/reset-password', [PublicAuthController::class, 'resetPasswordPublic']);
 
 
 //PARA LA AUTH
