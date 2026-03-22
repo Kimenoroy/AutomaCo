@@ -22,6 +22,7 @@ class WompiService
     }
 
     public function getAccessToken(): ?string
+    
     {
         try {
             $response = Http::asForm()->post("{$this->idUrl}/connect/token", [
@@ -65,7 +66,7 @@ class WompiService
                     'cantidadMaximaVisualizar' => 1,
                     'urlRetorno' => env('FRONTEND_URL', 'http://localhost:5173/') . 'pago/completado',
 
-                    'urlWebhook' => 'https://mouse-coordination-rome-lyrics.trycloudflare.com/api/payments/webhook',
+                    'urlWebhook' => 'https://lap-salem-cohen-ultimately.trycloudflare.com/api/payments/webhook',
                     'emailsNotificacion' => 'diegovillegas957@gmail.com'
                 ]
             ]);

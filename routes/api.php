@@ -13,6 +13,7 @@ use App\Http\Controllers\Private\ActivationCodeController;
 use App\Http\Controllers\Public\PaymentController;
 use App\Http\Controllers\Public\PlanController;
 use App\Http\Controllers\Public\PublicAuthController;
+use App\Http\Controllers\Public\TransactionController;
 use PHPUnit\Framework\Attributes\Group;
 
 /*Rutas Públicas (Cualquiera puede entrar)*/
@@ -46,9 +47,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Esta ruta devuelve al usuario actual
     Route::get('/auth/me', [AuthController::class, 'me']);
 
+    //Rutas para el historial de transacciones del usuario autenticado
+    Route::get('/transactions', [TransactionController::class, 'index']);
+    
+
     //Setting publica y privada
     Route::get('/public/settings', [SettingsController::class, 'indexPublic']);
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile']);
+    Route::put('/settings/password', [SettingsController::class, 'updatePassword']);
     Route::put('/settings/password', [SettingsController::class, 'updatePassword']);
 
     // Rutas que requieren cuenta activada
